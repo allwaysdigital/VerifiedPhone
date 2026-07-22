@@ -14,6 +14,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
+import { setLoggedIn } from '../auth/authStorage';
 import LogoMark from '../assets/logo_mark.svg';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OtpVerify'>;
@@ -23,10 +24,11 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
   const { phoneNumber } = route.params;
   const [otp, setOtp] = useState('');
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (otp.length < 4) {
       return;
     }
+    await setLoggedIn(true);
     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
   };
 
