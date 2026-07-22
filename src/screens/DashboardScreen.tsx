@@ -6,6 +6,7 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import HeaderLogo from '../assets/icons/header_logo.svg';
 import StockBoxIcon from '../assets/icons/stock_box.svg';
@@ -181,27 +182,29 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerTitle: {
+    fontFamily: fonts.interMedium,
     fontSize: 20,
-    fontWeight: '500',
     color: colors.white,
   },
   headerWordmark: {
+    fontFamily: fonts.robotoRegular,
     fontSize: 10,
     color: colors.white,
     letterSpacing: 1,
     marginTop: 2,
   },
   headerWordmarkBold: {
-    fontWeight: '700',
+    fontFamily: fonts.robotoBold,
   },
   headerDate: {
+    fontFamily: fonts.robotoMedium,
     fontSize: 14,
     color: colors.white,
     marginTop: 16,
   },
   sectionTitle: {
+    fontFamily: fonts.robotoMedium,
     fontSize: 16,
-    fontWeight: '500',
     color: colors.textMuted,
     marginHorizontal: 16,
     marginTop: 20,
@@ -234,15 +237,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   statLabel: {
+    fontFamily: fonts.sfProRegular,
     fontSize: 12,
     color: colors.textMuted,
   },
   statValue: {
+    fontFamily: fonts.sfProSemiBold,
     fontSize: 20,
-    fontWeight: '600',
     marginTop: 8,
   },
   statCaption: {
+    fontFamily: fonts.sfProRegular,
     fontSize: 15,
     color: '#999999',
     marginTop: 4,
@@ -277,6 +282,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
   },
   quickActionLabel: {
+    fontFamily: fonts.sfProRegular,
     fontSize: 12,
     color: colors.text,
   },
@@ -301,18 +307,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   brandName: {
+    fontFamily: fonts.robotoRegular,
     flex: 1,
     fontSize: 16,
     color: colors.textMuted,
   },
   brandUnits: {
+    fontFamily: fonts.robotoRegular,
     flex: 1,
     fontSize: 16,
     color: colors.textMuted,
   },
   brandValue: {
+    fontFamily: fonts.robotoSemiBold,
     fontSize: 16,
-    fontWeight: '600',
     color: colors.greenDark,
   },
 });

@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import Slide2Illustration from '../assets/onboarding/slide2.svg';
 
@@ -186,8 +187,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   title: {
+    fontFamily: fonts.robotoSemiBold,
     fontSize: 27,
-    fontWeight: '600',
     lineHeight: 34,
     textAlign: 'center',
     marginTop: 32,
@@ -210,8 +211,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonText: {
+    fontFamily: fonts.robotoSemiBold,
     color: colors.white,
     fontSize: 18,
-    fontWeight: '600',
   },
 });

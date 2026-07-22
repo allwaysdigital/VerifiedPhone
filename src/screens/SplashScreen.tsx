@@ -9,7 +9,7 @@ import SplashBg from '../assets/splash_bg.svg';
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 export default function SplashScreen({ navigation }: Props) {
-  useScreenStatusBar('dark-content', colors.white);
+  useScreenStatusBar('dark-content', colors.white, true);
 
   useEffect(() => {
     const timer = setTimeout(() => {

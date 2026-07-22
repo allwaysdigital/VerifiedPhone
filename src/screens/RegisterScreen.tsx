@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
 import UploadIcon from '../assets/icons/upload_icon.svg';
@@ -97,8 +98,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   header: {
+    fontFamily: fonts.interMedium,
     fontSize: 20,
-    fontWeight: '500',
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 24,
@@ -124,16 +125,18 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
+    fontFamily: fonts.robotoMedium,
     fontSize: 22,
-    fontWeight: '500',
     color: colors.textMuted,
   },
   label: {
+    fontFamily: fonts.robotoRegular,
     fontSize: 16,
     color: colors.textMuted,
     marginBottom: 8,
   },
   input: {
+    fontFamily: fonts.robotoRegular,
     backgroundColor: colors.inputBg,
     borderRadius: 10,
     height: 48,
@@ -158,6 +161,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   uploadText: {
+    fontFamily: fonts.robotoRegular,
     fontSize: 16,
     color: colors.textMuted,
   },
@@ -169,8 +173,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonText: {
+    fontFamily: fonts.robotoRegular,
     color: colors.white,
     fontSize: 18,
-    fontWeight: '500',
   },
 });

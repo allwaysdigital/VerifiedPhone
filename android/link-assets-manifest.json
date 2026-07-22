@@ -1,0 +1,61 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "src/assets/fonts/Inter-Bold.ttf",
+      "sha1": "02a6d84c459820d684dd6313df1128b18687f18a"
+    },
+    {
+      "path": "src/assets/fonts/Inter-Medium.ttf",
+      "sha1": "5a8e6f1c48a0e7537b6669b6f468a2ca42d090b1"
+    },
+    {
+      "path": "src/assets/fonts/Inter-Regular.ttf",
+      "sha1": "bbafc338617e3339c7f86dbbb368df2e3eb20c95"
+    },
+    {
+      "path": "src/assets/fonts/Inter-SemiBold.ttf",
+      "sha1": "4fbdc5e5e25d3c3f03daf889468a2e87d0dec865"
+    },
+    {
+      "path": "src/assets/fonts/Manrope-Bold.ttf",
+      "sha1": "a1f45b2c111eb4d0a28c230bf8b26dddf1d7f9f1"
+    },
+    {
+      "path": "src/assets/fonts/Manrope-Regular.ttf",
+      "sha1": "63d42623e23acdcfa64139f9ec00c5bc1e469182"
+    },
+    {
+      "path": "src/assets/fonts/Manrope-SemiBold.ttf",
+      "sha1": "8b25bc3ea12facdf9f1f0a3287a0104e34b09358"
+    },
+    {
+      "path": "src/assets/fonts/NunitoSans-Bold.ttf",
+      "sha1": "7c29ec062f3f73f224e64dd11cb704ac2187eb23"
+    },
+    {
+      "path": "src/assets/fonts/NunitoSans-Regular.ttf",
+      "sha1": "5d3ec2eae34d8668672c148afc4a753563951857"
+    },
+    {
+      "path": "src/assets/fonts/NunitoSans-SemiBold.ttf",
+      "sha1": "7fafb97e41659d7ae61e6ede83c598310ee740e5"
+    },
+    {
+      "path": "src/assets/fonts/Roboto-Bold.ttf",
+      "sha1": "60ab55ebd3306ed3347c6ad375dc2025339581ec"
+    },
+    {
+      "path": "src/assets/fonts/Roboto-Medium.ttf",
+      "sha1": "9d2fb94fea4be9d0a6ccb69dd8d7122ca3138c37"
+    },
+    {
+      "path": "src/assets/fonts/Roboto-Regular.ttf",
+      "sha1": "23cbe02404a04405ebfd1c310fb1e9e44dc25712"
+    },
+    {
+      "path": "src/assets/fonts/Roboto-SemiBold.ttf",
+      "sha1": "5ae022c7be53da95caa47e99d3aa1c8d4cfbf383"
+    }
+  ]
+}

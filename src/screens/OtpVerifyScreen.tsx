@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import LogoMark from '../assets/logo_mark.svg';
 
@@ -91,9 +92,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   label: {
+    fontFamily: fonts.robotoMedium,
     fontSize: 22,
     lineHeight: 28,
-    fontWeight: '500',
     color: colors.textMuted,
     marginBottom: 8,
   },
@@ -106,10 +107,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   readOnlyText: {
+    fontFamily: fonts.robotoRegular,
     fontSize: 16,
     color: colors.text,
   },
   input: {
+    fontFamily: fonts.robotoRegular,
     backgroundColor: colors.inputBg,
     borderRadius: 10,
     height: 50,
@@ -126,11 +129,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonText: {
+    fontFamily: fonts.robotoSemiBold,
     color: colors.white,
     fontSize: 18,
-    fontWeight: '600',
   },
   resendText: {
+    fontFamily: fonts.robotoRegular,
     textAlign: 'center',
     marginTop: 16,
     fontSize: 16,

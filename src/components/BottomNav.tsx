@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
 import NavDashboardIcon from '../assets/icons/nav_dashboard.svg';
@@ -25,8 +26,10 @@ const LABELS: Record<string, string> = {
 };
 
 export default function BottomNav({ state, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.bottomNav}>
+    <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {state.routes.map((route, index) => {
         const isActive = state.index === index;
         const tint = isActive ? colors.primary : colors.navInactive;
