@@ -23,6 +23,17 @@ export type Device = {
   sellerName: string;
   sellerMobile: string;
   sellerCity: string;
+  sellerAltMobile?: string;
+  sellerAddress?: string;
+  sellerState?: string;
+  sellerPincode?: string;
+  declarationDate?: string;
+  purchaseTime?: string;
+  buyerName?: string;
+  buyerMobile?: string;
+  buyerAddress?: string;
+  salePrice?: number;
+  warrantyPeriod?: string;
 };
 
 export const devices: Device[] = [
@@ -114,6 +125,17 @@ export const devices: Device[] = [
     sellerName: 'Priya Patel',
     sellerMobile: '+91 90000 11111',
     sellerCity: 'Delhi',
+    sellerAltMobile: '+91 91234 56789',
+    sellerAddress: 'House No. 45, Sector 12',
+    sellerState: 'Delhi',
+    sellerPincode: '110001',
+    declarationDate: '10/2/2026',
+    purchaseTime: '5:30:00 am',
+    buyerName: 'Rohit Mehta',
+    buyerMobile: '+91 99887 12345',
+    buyerAddress: 'Block B, Tower 3, Andheri, Mumbai - 400053',
+    salePrice: 42000,
+    warrantyPeriod: '3 months',
   },
   {
     id: '5',

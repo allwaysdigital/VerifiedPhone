@@ -7,6 +7,7 @@ import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { devices } from '../data/devices';
 import Badge from '../components/Badge';
+import BackButton from '../components/BackButton';
 import UploadIcon from '../assets/icons/upload_icon.svg';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DeviceDetails'>;
@@ -34,15 +35,24 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
   const isSold = device.status === 'Sold';
 
   const handleMarkAsSold = () => {
-    navigation.goBack();
+    navigation.navigate('AddSale', { deviceId: device.id });
+  };
+
+  const handleDownloadInvoice = () => {
+    navigation.navigate('InvoicePreview', {
+      deviceId: device.id,
+      customerName: device.buyerName ?? '',
+      customerMobile: device.buyerMobile ?? '',
+      customerAddress: device.buyerAddress ?? '',
+      salePrice: device.salePrice ?? device.expectedSalePrice,
+      warrantyPeriod: device.warrantyPeriod ?? '',
+    });
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>Device Details</Text>
         <TouchableOpacity hitSlop={12}>
           <Text style={styles.editIcon}>✎</Text>
@@ -156,11 +166,13 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
 
         {isSold ? (
           <>
-            <TouchableOpacity style={styles.outlineButton}>
+            <TouchableOpacity
+              style={styles.outlineButton}
+              onPress={() => navigation.navigate('PoliceExportRecord', { deviceId: device.id })}>
               <UploadIcon width={18} height={18} />
               <Text style={styles.outlineButtonText}>Police Export Record</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.outlineButton}>
+            <TouchableOpacity style={styles.outlineButton} onPress={handleDownloadInvoice}>
               <UploadIcon width={18} height={18} />
               <Text style={styles.outlineButtonText}>Download Invoice</Text>
             </TouchableOpacity>
@@ -197,10 +209,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
-  },
-  backArrow: {
-    fontSize: 24,
-    color: colors.text,
   },
   headerTitle: {
     fontSize: 18,

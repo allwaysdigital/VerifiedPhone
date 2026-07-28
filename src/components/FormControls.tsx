@@ -35,10 +35,12 @@ type FormInputProps = TextInputProps & {
 export function FormInput({ label, required, style, ...rest }: FormInputProps) {
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>
-        {label}
-        {required ? <Text style={styles.required}> *</Text> : null}
-      </Text>
+      {label ? (
+        <Text style={styles.label}>
+          {label}
+          {required ? <Text style={styles.required}> *</Text> : null}
+        </Text>
+      ) : null}
       <TextInput
         style={[styles.input, style]}
         placeholderTextColor={colors.textDisabled}
@@ -68,10 +70,12 @@ export function FormSelect({
   const [open, setOpen] = useState(false);
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>
-        {label}
-        {required ? <Text style={styles.required}> *</Text> : null}
-      </Text>
+      {label ? (
+        <Text style={styles.label}>
+          {label}
+          {required ? <Text style={styles.required}> *</Text> : null}
+        </Text>
+      ) : null}
       <TouchableOpacity style={styles.selectInput} onPress={() => setOpen(true)}>
         <Text style={value ? styles.selectValue : styles.selectPlaceholder}>
           {value ?? placeholder}

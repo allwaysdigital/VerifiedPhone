@@ -46,11 +46,12 @@ type QuickActionProps = {
   iconBg: string;
   icon: React.ReactNode;
   round?: boolean;
+  onPress?: () => void;
 };
 
-function QuickAction({ label, iconBg, icon, round }: QuickActionProps) {
+function QuickAction({ label, iconBg, icon, round, onPress }: QuickActionProps) {
   return (
-    <TouchableOpacity style={styles.quickActionCard}>
+    <TouchableOpacity style={styles.quickActionCard} onPress={onPress}>
       <View
         style={[
           styles.quickActionIconWrap,
@@ -74,7 +75,7 @@ const brandDistribution: BrandRow[] = [
   { brand: 'Others', units: '12 units', value: '₹3.5L' },
 ];
 
-export default function DashboardScreen(_props: Props) {
+export default function DashboardScreen({ navigation }: Props) {
   useScreenStatusBar('light-content', colors.primary);
   const insets = useSafeAreaInsets();
 
@@ -136,25 +137,31 @@ export default function DashboardScreen(_props: Props) {
             iconBg={colors.pink}
             icon={<AddBrandPersonIcon width={24} height={24} />}
             round
+            onPress={() => navigation.navigate('Brands')}
           />
           <QuickAction
             label="Add Sale"
             iconBg={colors.greenDark}
             icon={<AddSaleDollarIcon width={24} height={24} />}
             round
+            onPress={() => navigation.navigate('AddSale')}
           />
         </View>
 
         <Text style={styles.sectionTitle}>Brand-wise Distribution</Text>
-        <View style={styles.brandCard}>
-          {brandDistribution.map(row => (
-            <View key={row.brand} style={styles.brandRow}>
-              <Text style={styles.brandName}>{row.brand}</Text>
-              <Text style={styles.brandUnits}>{row.units}</Text>
-              <Text style={styles.brandValue}>{row.value}</Text>
-            </View>
-          ))}
-        </View>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('Brands')}>
+          <View style={styles.brandCard}>
+            {brandDistribution.map(row => (
+              <View key={row.brand} style={styles.brandRow}>
+                <Text style={styles.brandName}>{row.brand}</Text>
+                <Text style={styles.brandUnits}>{row.units}</Text>
+                <Text style={styles.brandValue}>{row.value}</Text>
+              </View>
+            ))}
+          </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

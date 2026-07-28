@@ -10,6 +10,11 @@ import RegisterScreen from '../screens/RegisterScreen';
 import MainTabs from './MainTabs';
 import DigitalSignatureScreen from '../screens/DigitalSignatureScreen';
 import DeviceDetailsScreen from '../screens/DeviceDetailsScreen';
+import BrandsScreen from '../screens/BrandsScreen';
+import AddBrandScreen from '../screens/AddBrandScreen';
+import AddSaleScreen from '../screens/AddSaleScreen';
+import InvoicePreviewScreen from '../screens/InvoicePreviewScreen';
+import PoliceExportRecordScreen from '../screens/PoliceExportRecordScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,6 +32,11 @@ export default function RootNavigator() {
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="DigitalSignature" component={DigitalSignatureScreen} />
         <Stack.Screen name="DeviceDetails" component={DeviceDetailsScreen} />
+        <Stack.Screen name="Brands" component={BrandsScreen} />
+        <Stack.Screen name="AddBrand" component={AddBrandScreen} />
+        <Stack.Screen name="AddSale" component={AddSaleScreen} />
+        <Stack.Screen name="InvoicePreview" component={InvoicePreviewScreen} />
+        <Stack.Screen name="PoliceExportRecord" component={PoliceExportRecordScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

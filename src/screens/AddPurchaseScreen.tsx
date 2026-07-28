@@ -20,13 +20,14 @@ import {
   FormSelect,
   UploadField,
 } from '../components/FormControls';
+import { getBrandNames } from '../data/brands';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'AddPurchase'>,
   NativeStackScreenProps<RootStackParamList>
 >;
 
-const BRAND_OPTIONS = ['Apple', 'Samsung', 'OnePlus', 'Xiaomi', 'Others'];
+const BRAND_OPTIONS = getBrandNames();
 const CONDITION_OPTIONS = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
 const ACCESSORY_OPTIONS = ['Charger', 'Box', 'Cable', 'Handsfree', 'Original Bill'];
 

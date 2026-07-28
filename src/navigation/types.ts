@@ -7,6 +7,18 @@ export type RootStackParamList = {
   MainTabs: undefined;
   DigitalSignature: undefined;
   DeviceDetails: { deviceId: string };
+  Brands: undefined;
+  AddBrand: undefined;
+  AddSale: { deviceId?: string } | undefined;
+  InvoicePreview: {
+    deviceId: string;
+    customerName: string;
+    customerMobile: string;
+    customerAddress: string;
+    salePrice: number;
+    warrantyPeriod: string;
+  };
+  PoliceExportRecord: { deviceId: string };
 };
 
 export type MainTabParamList = {
