@@ -14,9 +14,24 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
-import UploadIcon from '../assets/icons/upload_icon.svg';
+import { UploadField } from '../components/FormControls';
+import {
+  GST_MESSAGE,
+  MOBILE_MESSAGE,
+  REQUIRED_MESSAGE,
+  isRequired,
+  isValidGst,
+  isValidMobile,
+} from '../utils/validators';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
+
+type FormErrors = {
+  shopName?: string;
+  gstNumber?: string;
+  address?: string;
+  contactNumber?: string;
+};
 
 export default function RegisterScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
@@ -24,8 +39,32 @@ export default function RegisterScreen({ navigation }: Props) {
   const [gstNumber, setGstNumber] = useState('');
   const [address, setAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
+  const [shopLogo, setShopLogo] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const validate = (): FormErrors => {
+    const nextErrors: FormErrors = {};
+    if (!isRequired(shopName)) {
+      nextErrors.shopName = REQUIRED_MESSAGE;
+    }
+    if (gstNumber.trim() && !isValidGst(gstNumber)) {
+      nextErrors.gstNumber = GST_MESSAGE;
+    }
+    if (!isRequired(address)) {
+      nextErrors.address = REQUIRED_MESSAGE;
+    }
+    if (!isValidMobile(contactNumber)) {
+      nextErrors.contactNumber = MOBILE_MESSAGE;
+    }
+    return nextErrors;
+  };
 
   const handleSave = () => {
+    const nextErrors = validate();
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
     navigation.navigate('Login');
   };
 
@@ -40,48 +79,79 @@ export default function RegisterScreen({ navigation }: Props) {
           </View>
 
           <Text style={styles.label}>Shop Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Mobile Hub"
-            placeholderTextColor={colors.textDisabled}
-            value={shopName}
-            onChangeText={setShopName}
-          />
+          <View style={styles.fieldWrap}>
+            <TextInput
+              style={[styles.input, errors.shopName ? styles.inputError : null]}
+              placeholder="Mobile Hub"
+              placeholderTextColor={colors.textDisabled}
+              value={shopName}
+              onChangeText={text => {
+                setShopName(text);
+                if (errors.shopName) {
+                  setErrors(prev => ({ ...prev, shopName: undefined }));
+                }
+              }}
+            />
+            {errors.shopName ? <Text style={styles.errorText}>{errors.shopName}</Text> : null}
+          </View>
 
           <Text style={styles.label}>GST Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="27AABCU9603R1ZM"
-            placeholderTextColor={colors.textDisabled}
-            autoCapitalize="characters"
-            value={gstNumber}
-            onChangeText={setGstNumber}
-          />
+          <View style={styles.fieldWrap}>
+            <TextInput
+              style={[styles.input, errors.gstNumber ? styles.inputError : null]}
+              placeholder="27AABCU9603R1ZM"
+              placeholderTextColor={colors.textDisabled}
+              autoCapitalize="characters"
+              value={gstNumber}
+              onChangeText={text => {
+                setGstNumber(text);
+                if (errors.gstNumber) {
+                  setErrors(prev => ({ ...prev, gstNumber: undefined }));
+                }
+              }}
+            />
+            {errors.gstNumber ? <Text style={styles.errorText}>{errors.gstNumber}</Text> : null}
+          </View>
 
           <Text style={styles.label}>Address</Text>
-          <TextInput
-            style={[styles.input, styles.addressInput]}
-            placeholderTextColor={colors.textDisabled}
-            multiline
-            value={address}
-            onChangeText={setAddress}
-          />
+          <View style={styles.fieldWrap}>
+            <TextInput
+              style={[styles.input, styles.addressInput, errors.address ? styles.inputError : null]}
+              placeholderTextColor={colors.textDisabled}
+              multiline
+              value={address}
+              onChangeText={text => {
+                setAddress(text);
+                if (errors.address) {
+                  setErrors(prev => ({ ...prev, address: undefined }));
+                }
+              }}
+            />
+            {errors.address ? <Text style={styles.errorText}>{errors.address}</Text> : null}
+          </View>
 
           <Text style={styles.label}>Contact Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="+91 98765 43210"
-            placeholderTextColor={colors.textDisabled}
-            keyboardType="phone-pad"
-            value={contactNumber}
-            onChangeText={setContactNumber}
-          />
+          <View style={styles.fieldWrap}>
+            <TextInput
+              style={[styles.input, errors.contactNumber ? styles.inputError : null]}
+              placeholder="Enter 10-digit mobile number"
+              placeholderTextColor={colors.textDisabled}
+              keyboardType="phone-pad"
+              maxLength={10}
+              value={contactNumber}
+              onChangeText={text => {
+                setContactNumber(text.replace(/[^\d]/g, ''));
+                if (errors.contactNumber) {
+                  setErrors(prev => ({ ...prev, contactNumber: undefined }));
+                }
+              }}
+            />
+            {errors.contactNumber ? (
+              <Text style={styles.errorText}>{errors.contactNumber}</Text>
+            ) : null}
+          </View>
 
-          <Text style={styles.label}>Shop Logo</Text>
-          <TouchableOpacity style={styles.uploadBox}>
-            <UploadIcon width={24} height={24} />
-            <Text style={styles.uploadText}>Upload Logo</Text>
-          </TouchableOpacity>
+          <UploadField label="Shop Logo" imageUri={shopLogo} onImageSelected={setShopLogo} />
 
           <TouchableOpacity style={styles.button} onPress={handleSave}>
             <Text style={styles.buttonText}>Save Shop Details</Text>
@@ -135,6 +205,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginBottom: 8,
   },
+  fieldWrap: {
+    marginBottom: 20,
+  },
   input: {
     fontFamily: fonts.robotoRegular,
     backgroundColor: colors.inputBg,
@@ -143,27 +216,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 16,
     color: colors.text,
-    marginBottom: 20,
+  },
+  inputError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    fontFamily: fonts.robotoRegular,
+    fontSize: 14,
+    color: colors.danger,
+    marginTop: 8,
   },
   addressInput: {
     height: 67,
     textAlignVertical: 'top',
     paddingTop: 12,
-  },
-  uploadBox: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    height: 86,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    marginBottom: 24,
-  },
-  uploadText: {
-    fontFamily: fonts.robotoRegular,
-    fontSize: 16,
-    color: colors.textMuted,
   },
   button: {
     backgroundColor: colors.primary,

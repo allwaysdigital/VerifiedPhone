@@ -16,16 +16,27 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { setLoggedIn } from '../auth/authStorage';
 import LogoMark from '../assets/logo_mark.svg';
+import { isValidOtp } from '../utils/validators';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OtpVerify'>;
+const OTP_LENGTH = 6;
 
 export default function OtpVerifyScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const { phoneNumber } = route.params;
   const [otp, setOtp] = useState('');
+  const [error, setError] = useState('');
+
+  const handleOtpChange = (text: string) => {
+    setOtp(text.replace(/[^\d]/g, ''));
+    if (error) {
+      setError('');
+    }
+  };
 
   const handleVerify = async () => {
-    if (otp.length < 4) {
+    if (!isValidOtp(otp, OTP_LENGTH)) {
+      setError(`Enter the ${OTP_LENGTH}-digit OTP`);
       return;
     }
     await setLoggedIn(true);
@@ -47,15 +58,18 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
           </View>
 
           <Text style={styles.label}>OTP</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="OTP"
-            placeholderTextColor={colors.textDisabled}
-            keyboardType="number-pad"
-            maxLength={6}
-            value={otp}
-            onChangeText={text => setOtp(text.replace(/[^\d]/g, ''))}
-          />
+          <View style={styles.fieldWrap}>
+            <TextInput
+              style={[styles.input, error ? styles.inputError : null]}
+              placeholder="OTP"
+              placeholderTextColor={colors.textDisabled}
+              keyboardType="number-pad"
+              maxLength={OTP_LENGTH}
+              value={otp}
+              onChangeText={handleOtpChange}
+            />
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          </View>
 
           <TouchableOpacity style={styles.button} onPress={handleVerify}>
             <Text style={styles.buttonText}>Verify</Text>
@@ -113,6 +127,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
+  fieldWrap: {
+    marginBottom: 24,
+  },
   input: {
     fontFamily: fonts.robotoRegular,
     backgroundColor: colors.inputBg,
@@ -121,7 +138,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     color: colors.text,
-    marginBottom: 24,
+  },
+  inputError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    fontFamily: fonts.robotoRegular,
+    fontSize: 14,
+    color: colors.danger,
+    marginTop: 8,
   },
   button: {
     backgroundColor: colors.primary,

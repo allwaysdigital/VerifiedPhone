@@ -35,6 +35,10 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string/>
+	<key>NSCameraUsageDescription</key>
+	<string>VerifiedPhone needs camera access to capture device and document photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>VerifiedPhone needs photo library access to upload device and document photos.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

@@ -9,6 +9,14 @@ import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { FormInput, FormSection, FormSelect } from '../components/FormControls';
 import BackButton from '../components/BackButton';
 import { devices, type Device } from '../data/devices';
+import {
+  MOBILE_MESSAGE,
+  PRICE_MESSAGE,
+  REQUIRED_MESSAGE,
+  isPositiveNumber,
+  isRequired,
+  isValidMobile,
+} from '../utils/validators';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddSale'>;
 
@@ -40,6 +48,7 @@ export default function AddSaleScreen({ navigation, route }: Props) {
   const [salePrice, setSalePrice] = useState('');
   const [paymentMode, setPaymentMode] = useState<string | null>(null);
   const [warrantyPeriod, setWarrantyPeriod] = useState('');
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   const selectedDevice =
     AVAILABLE_DEVICES.find(d => phoneLabel(d) === selectedPhone) ?? null;
@@ -57,14 +66,18 @@ export default function AddSaleScreen({ navigation, route }: Props) {
   const profit = selectedDevice ? salePriceNum - purchasePrice : 0;
   const margin = selectedDevice && purchasePrice > 0 ? (profit / purchasePrice) * 100 : 0;
 
-  const canComplete =
-    !!selectedDevice &&
-    customerName.trim().length > 0 &&
-    customerMobile.trim().length > 0 &&
-    salePriceNum > 0 &&
-    !!paymentMode;
+  const errors = {
+    selectedPhone: selectedDevice ? undefined : REQUIRED_MESSAGE,
+    customerName: isRequired(customerName) ? undefined : REQUIRED_MESSAGE,
+    customerMobile: isValidMobile(customerMobile) ? undefined : MOBILE_MESSAGE,
+    salePrice: isPositiveNumber(salePrice) ? undefined : PRICE_MESSAGE,
+    paymentMode: paymentMode ? undefined : REQUIRED_MESSAGE,
+  };
+  const canComplete = Object.values(errors).every(error => !error);
+  const showErrors = attemptedSubmit;
 
   const handleComplete = () => {
+    setAttemptedSubmit(true);
     if (!canComplete || !selectedDevice) {
       return;
     }
@@ -92,6 +105,7 @@ export default function AddSaleScreen({ navigation, route }: Props) {
             placeholder="Select Phone"
             options={AVAILABLE_DEVICES.map(phoneLabel)}
             value={selectedPhone}
+            error={showErrors ? errors.selectedPhone : undefined}
             onChange={handleSelectPhone}
           />
           {selectedDevice ? (
@@ -114,6 +128,7 @@ export default function AddSaleScreen({ navigation, route }: Props) {
             required
             placeholder="Enter  Customer name"
             value={customerName}
+            error={showErrors ? errors.customerName : undefined}
             onChangeText={setCustomerName}
           />
           <FormInput
@@ -123,7 +138,8 @@ export default function AddSaleScreen({ navigation, route }: Props) {
             keyboardType="phone-pad"
             maxLength={10}
             value={customerMobile}
-            onChangeText={setCustomerMobile}
+            error={showErrors ? errors.customerMobile : undefined}
+            onChangeText={text => setCustomerMobile(text.replace(/[^\d]/g, ''))}
           />
           <FormInput
             label="Customer Address"
@@ -142,7 +158,8 @@ export default function AddSaleScreen({ navigation, route }: Props) {
             placeholder="Enter sale price"
             keyboardType="number-pad"
             value={salePrice}
-            onChangeText={setSalePrice}
+            error={showErrors ? errors.salePrice : undefined}
+            onChangeText={text => setSalePrice(text.replace(/[^\d]/g, ''))}
           />
           <FormSelect
             label="Payment Mode"
@@ -150,6 +167,7 @@ export default function AddSaleScreen({ navigation, route }: Props) {
             placeholder="Select payment mode"
             options={PAYMENT_MODE_OPTIONS}
             value={paymentMode}
+            error={showErrors ? errors.paymentMode : undefined}
             onChange={setPaymentMode}
           />
           <FormInput
@@ -196,8 +214,7 @@ export default function AddSaleScreen({ navigation, route }: Props) {
 
         <TouchableOpacity
           style={[styles.completeButton, !canComplete && styles.completeButtonDisabled]}
-          onPress={handleComplete}
-          disabled={!canComplete}>
+          onPress={handleComplete}>
           <Text style={styles.completeButtonText}>Complete Sale & Generate Invoice</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>

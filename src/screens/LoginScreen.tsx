@@ -15,15 +15,25 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import LogoMark from '../assets/logo_mark.svg';
+import { isValidMobile, MOBILE_MESSAGE } from '../utils/validators';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [error, setError] = useState('');
+
+  const handlePhoneChange = (text: string) => {
+    setPhoneNumber(text.replace(/[^\d]/g, ''));
+    if (error) {
+      setError('');
+    }
+  };
 
   const handleSendOtp = () => {
-    if (!/^\d{10}$/.test(phoneNumber)) {
+    if (!isValidMobile(phoneNumber)) {
+      setError(MOBILE_MESSAGE);
       return;
     }
     navigation.navigate('OtpVerify', { phoneNumber });
@@ -42,15 +52,18 @@ export default function LoginScreen({ navigation }: Props) {
             <Text style={styles.titleDefault}>Enter your </Text>
             <Text style={styles.titleHighlight}>phone number</Text>
           </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Mobile Number."
-            placeholderTextColor={colors.textDisabled}
-            keyboardType="number-pad"
-            maxLength={10}
-            value={phoneNumber}
-            onChangeText={text => setPhoneNumber(text.replace(/[^\d]/g, ''))}
-          />
+          <View style={styles.fieldWrap}>
+            <TextInput
+              style={[styles.input, error ? styles.inputError : null]}
+              placeholder="Mobile Number."
+              placeholderTextColor={colors.textDisabled}
+              keyboardType="number-pad"
+              maxLength={10}
+              value={phoneNumber}
+              onChangeText={handlePhoneChange}
+            />
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          </View>
           <TouchableOpacity style={styles.button} onPress={handleSendOtp}>
             <Text style={styles.buttonText}>Send OTP</Text>
           </TouchableOpacity>
@@ -102,6 +115,9 @@ const styles = StyleSheet.create({
   titleHighlight: {
     color: colors.primary,
   },
+  fieldWrap: {
+    marginBottom: 24,
+  },
   input: {
     fontFamily: fonts.robotoRegular,
     backgroundColor: colors.inputBg,
@@ -110,7 +126,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     color: colors.text,
-    marginBottom: 24,
+  },
+  inputError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    fontFamily: fonts.robotoRegular,
+    fontSize: 14,
+    color: colors.danger,
+    marginTop: 8,
   },
   button: {
     backgroundColor: colors.primary,

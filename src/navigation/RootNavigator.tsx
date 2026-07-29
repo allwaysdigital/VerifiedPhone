@@ -15,6 +15,10 @@ import AddBrandScreen from '../screens/AddBrandScreen';
 import AddSaleScreen from '../screens/AddSaleScreen';
 import InvoicePreviewScreen from '../screens/InvoicePreviewScreen';
 import PoliceExportRecordScreen from '../screens/PoliceExportRecordScreen';
+import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
+import PlanDetailScreen from '../screens/PlanDetailScreen';
+import TrialActivatedScreen from '../screens/TrialActivatedScreen';
+import ManageSubscriptionScreen from '../screens/ManageSubscriptionScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -37,6 +41,10 @@ export default function RootNavigator() {
         <Stack.Screen name="AddSale" component={AddSaleScreen} />
         <Stack.Screen name="InvoicePreview" component={InvoicePreviewScreen} />
         <Stack.Screen name="PoliceExportRecord" component={PoliceExportRecordScreen} />
+        <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
+        <Stack.Screen name="PlanDetail" component={PlanDetailScreen} />
+        <Stack.Screen name="TrialActivated" component={TrialActivatedScreen} />
+        <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

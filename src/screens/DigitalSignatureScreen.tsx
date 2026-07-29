@@ -72,6 +72,15 @@ export default function DigitalSignatureScreen({ navigation }: Props) {
             <Text style={styles.saveButtonText}>Save Seller</Text>
           </TouchableOpacity>
         </View>
+        {!canSave ? (
+          <Text style={styles.validationHint}>
+            {signatureEmpty && !confirmed
+              ? 'Please sign above and confirm the declaration to continue.'
+              : signatureEmpty
+              ? 'Please sign above to continue.'
+              : 'Please confirm the declaration to continue.'}
+          </Text>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -164,5 +173,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.white,
+  },
+  validationHint: {
+    textAlign: 'center',
+    color: colors.danger,
+    fontSize: 13,
+    marginTop: 12,
   },
 });

@@ -1,0 +1,63 @@
+/**
+ * @format
+ */
+
+import React from 'react';
+import { TextInput } from 'react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import SettingsScreen from '../../src/screens/SettingsScreen';
+import { createMockNavigation } from '../../test-utils/mockNavigation';
+
+// Field order as rendered: Shop Name, GST Number, Address, Contact Number
+function getFields() {
+  const inputs = screen.UNSAFE_getAllByType(TextInput);
+  return {
+    shopName: inputs[0],
+    gstNumber: inputs[1],
+    address: inputs[2],
+    contactNumber: inputs[3],
+  };
+}
+
+function renderScreen() {
+  const navigation = createMockNavigation();
+  render(<SettingsScreen navigation={navigation} route={{} as any} />);
+  return { navigation };
+}
+
+describe('SettingsScreen shop details form', () => {
+  test('requires an address before saving', () => {
+    renderScreen();
+
+    fireEvent.press(screen.getByText('Save Shop Details'));
+
+    expect(screen.getByText('This field is required')).toBeTruthy();
+  });
+
+  test('rejects a badly formatted GST number', () => {
+    renderScreen();
+    const { gstNumber, address } = getFields();
+
+    fireEvent.changeText(gstNumber, 'BADGST123');
+    fireEvent.changeText(address, '123 Main Street');
+    fireEvent.press(screen.getByText('Save Shop Details'));
+
+    expect(
+      screen.getByText('Enter a valid GST number (e.g., 27AABCU9603R1ZM)'),
+    ).toBeTruthy();
+    expect(screen.queryByText('This field is required')).toBeNull();
+  });
+
+  test('accepts a fully valid form with no errors shown', () => {
+    renderScreen();
+    const { address } = getFields();
+
+    fireEvent.changeText(address, '123 Main Street, Mumbai');
+    fireEvent.press(screen.getByText('Save Shop Details'));
+
+    expect(screen.queryByText('This field is required')).toBeNull();
+    expect(
+      screen.queryByText('Enter a valid GST number (e.g., 27AABCU9603R1ZM)'),
+    ).toBeNull();
+  });
+});

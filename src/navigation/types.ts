@@ -1,3 +1,5 @@
+import type { PlanId } from '../data/subscription';
+
 export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
@@ -19,6 +21,10 @@ export type RootStackParamList = {
     warrantyPeriod: string;
   };
   PoliceExportRecord: { deviceId: string };
+  SubscriptionPlans: undefined;
+  PlanDetail: { planId: PlanId };
+  TrialActivated: { planId: PlanId };
+  ManageSubscription: undefined;
 };
 
 export type MainTabParamList = {
