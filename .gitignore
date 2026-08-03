@@ -76,3 +76,7 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Firebase config (project-specific, not shared via source control)
+android/app/google-services.json
+ios/VerifiedPhone/GoogleService-Info.plist

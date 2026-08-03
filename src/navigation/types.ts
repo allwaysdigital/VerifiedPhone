@@ -1,10 +1,11 @@
+import type { ConfirmationResult } from '@react-native-firebase/auth';
 import type { PlanId } from '../data/subscription';
 
 export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
   Login: undefined;
-  OtpVerify: { phoneNumber: string };
+  OtpVerify: { dialCode: string; phoneNumber: string; confirmation: ConfirmationResult };
   Register: undefined;
   MainTabs: undefined;
   DigitalSignature: undefined;

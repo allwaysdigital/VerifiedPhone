@@ -14,7 +14,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { setLoggedIn } from '../auth/authStorage';
+import { getAuthErrorMessage, sendOtp } from '../auth/firebaseAuth';
 import LogoMark from '../assets/logo_mark.svg';
 import { isValidOtp } from '../utils/validators';
 
@@ -23,9 +23,12 @@ const OTP_LENGTH = 6;
 
 export default function OtpVerifyScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const { phoneNumber } = route.params;
+  const { dialCode, phoneNumber } = route.params;
+  const [confirmation, setConfirmation] = useState(route.params.confirmation);
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const handleOtpChange = (text: string) => {
     setOtp(text.replace(/[^\d]/g, ''));
@@ -39,8 +42,28 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
       setError(`Enter the ${OTP_LENGTH}-digit OTP`);
       return;
     }
-    await setLoggedIn(true);
-    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+    setVerifying(true);
+    try {
+      await confirmation.confirm(otp);
+      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+    } catch (err) {
+      setError(getAuthErrorMessage(err, 'Invalid OTP. Please try again.'));
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResending(true);
+    setError('');
+    try {
+      const nextConfirmation = await sendOtp(dialCode, phoneNumber);
+      setConfirmation(nextConfirmation);
+    } catch (err) {
+      setError(getAuthErrorMessage(err, 'Could not resend OTP. Please try again.'));
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -54,7 +77,7 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
         <View style={styles.card}>
           <Text style={styles.label}>Phone number</Text>
           <View style={styles.readOnlyInput}>
-            <Text style={styles.readOnlyText}>+91 {phoneNumber}</Text>
+            <Text style={styles.readOnlyText}>{dialCode} {phoneNumber}</Text>
           </View>
 
           <Text style={styles.label}>OTP</Text>
@@ -71,11 +94,16 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleVerify}>
-            <Text style={styles.buttonText}>Verify</Text>
+          <TouchableOpacity
+            style={[styles.button, verifying && styles.buttonDisabled]}
+            onPress={handleVerify}
+            disabled={verifying}>
+            <Text style={styles.buttonText}>{verifying ? 'Verifying…' : 'Verify'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.resendText}>Resend OTP</Text>
+          <TouchableOpacity onPress={handleResend} disabled={resending}>
+            <Text style={styles.resendText}>
+              {resending ? 'Resending…' : 'Resend OTP'}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -155,6 +183,9 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     fontFamily: fonts.robotoSemiBold,

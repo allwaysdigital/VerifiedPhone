@@ -38,9 +38,10 @@ reset on every app restart. When wiring a real API, these modules are the seams 
   `src/components/SubscriptionIcons.tsx`.
 - **Native modules added**: `react-native-html-to-pdf` (invoice/police-record PDF generation),
   `react-native-share` (WhatsApp/share sheet), `react-native-image-picker` (camera/gallery
-  photo uploads). All three needed `pod install` (iOS) and a full native rebuild — **a JS
-  reload/Fast Refresh does not pick up new native modules**, this has caused confusion more
-  than once in this project's history. Rebuild with `npx react-native run-ios` /
+  photo uploads), `@react-native-firebase/app` + `@react-native-firebase/auth` (Phone Auth
+  login — see "Authentication" below). All needed `pod install` (iOS) and a full native
+  rebuild — **a JS reload/Fast Refresh does not pick up new native modules**, this has caused
+  confusion more than once in this project's history. Rebuild with `npx react-native run-ios` /
   `run-android` after adding any native dependency.
 - **Testing**: Jest + `@testing-library/react-native`. See "Testing setup" below — this took
   real effort to get working and has a few non-obvious gotchas.
@@ -90,7 +91,8 @@ things to know if tests start failing mysteriously:
 
 - **New native module → add a mock.** Anything that touches a real native module
   (`react-native-html-to-pdf`, `react-native-share`, `react-native-image-picker`,
-  `@react-native-async-storage/async-storage`) needs a manual mock in root-level `__mocks__/`
+  `@react-native-firebase/app`, `@react-native-firebase/auth`) needs a manual mock in
+  root-level `__mocks__/`
   (Jest auto-applies these for node_modules packages, no `jest.mock()` call needed). Follow the
   existing pattern in `__mocks__/react-native-image-picker.js` for the shape.
 - **`useScreenStatusBar` calls `useFocusEffect`**, which needs a real navigation context.
@@ -106,6 +108,54 @@ things to know if tests start failing mysteriously:
   the expected navigation call. See `__tests__/screens/AddSaleScreen.test.tsx` for a test that
   explicitly guards against the disabled-button bug above regressing.
 
+## Authentication (Firebase Phone Auth)
+
+Login/OTP is real Firebase Authentication now, not a local stub. `src/auth/firebaseAuth.ts` is
+the only file that should touch `@react-native-firebase/*` directly — everything else goes
+through its exports: `sendOtp(localMobile)`, `subscribeToAuthState(callback)`, `logout()`,
+`getAuthErrorMessage(error, fallback)`. Uses the **modular** RNFirebase v22+ API
+(`getAuth`/`signInWithPhoneNumber`/`onAuthStateChanged`/`signOut`), not the older namespaced
+`auth()` API — don't mix the two styles if you extend this.
+
+Flow: `LoginScreen` calls `sendOtp` → gets back a `ConfirmationResult` → passes it as a route
+param (along with the raw phone number) to `OtpVerifyScreen` → `confirmation.confirm(code)`
+completes sign-in. `ConfirmationResult` is **not serializable** (it has a `.confirm()` method) —
+this only works because this app doesn't use React Navigation linking/deep-link config or
+persist navigation state; don't add either without reworking this. `SplashScreen` decides
+Onboarding vs. MainTabs by subscribing to `onAuthStateChanged` once on mount (Firebase persists
+sessions natively — no more AsyncStorage flag; `authStorage.ts` and the
+`@react-native-async-storage/async-storage` dependency were removed as part of this, since
+nothing else in the app used them).
+
+**Setup this repo does NOT include and can't include** (needs a human with Firebase/Apple
+console access):
+- A real Firebase project. Package name / bundle ID for both platform registrations:
+  `com.verifiedphone.app`.
+- `android/app/google-services.json` and `ios/VerifiedPhone/GoogleService-Info.plist` — neither
+  file exists in this repo (correctly — they shouldn't be faked or committed by AI). The Android
+  Gradle build will fail immediately without the former (`com.google.gms.google-services` plugin
+  is already applied in `android/app/build.gradle`); the iOS app will build but crash on launch
+  without the latter (`FirebaseApp.configure()` in `AppDelegate.swift` requires it).
+- The `GoogleService-Info.plist` also needs to be **added to the Xcode project as a bundle
+  resource** (drag into `ios/VerifiedPhone/` in Xcode with target membership checked) — placing
+  the file on disk alone isn't enough for iOS.
+- Phone Auth must be enabled as a Sign-in provider in the Firebase console.
+- Android: the debug keystore's SHA-1/SHA-256 must be registered on the Firebase Android app
+  (get them via `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey
+  -storepass android -keypass android`; a separate release-keystore fingerprint is needed before
+  shipping a release build).
+- iOS: for silent (no-CAPTCHA) verification, enable Push Notifications + Background Modes >
+  Remote notifications, and upload an APNs auth key to the Firebase console. Without this,
+  Firebase falls back to a reCAPTCHA web challenge — that's an expected, supported fallback, not
+  a bug, if APNs isn't configured yet.
+- `ios/Podfile` needed `use_modular_headers!` added — the Firebase iOS SDK's Swift pods don't
+  define modules, which CocoaPods requires for static linking. If a future `pod install` fails
+  with "cannot yet be integrated as static libraries", this is already handled, don't re-add it
+  or flip to `use_frameworks!` without checking this line first.
+
+Phone numbers are sent to Firebase in E.164 format with a hardcoded `+91` (India) prefix — see
+`toE164` in `firebaseAuth.ts` if this app ever needs to support other countries.
+
 ## Known gaps / stubs
 
 - No backend — everything in `src/data/` is in-memory and resets on app restart.
@@ -115,3 +165,5 @@ things to know if tests start failing mysteriously:
 - iOS builds on the current dev machine are blocked by a missing iOS 26.2 Simulator platform
   (Xcode has the SDK but not the runtime installed) — this is a machine-setup issue, not a
   project issue; Android builds work fine via `npx react-native run-android`.
+- Firebase Phone Auth is wired end-to-end in code but **cannot run yet** — see "Authentication"
+  above for the exact config files/console steps a human still needs to do.

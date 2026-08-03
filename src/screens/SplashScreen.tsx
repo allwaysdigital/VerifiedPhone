@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { getIsLoggedIn } from '../auth/authStorage';
+import { subscribeToAuthState } from '../auth/firebaseAuth';
 import SplashBg from '../assets/splash_bg.svg';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
@@ -14,23 +14,26 @@ export default function SplashScreen({ navigation }: Props) {
 
   useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
 
-    getIsLoggedIn().then(loggedIn => {
-      const timer = setTimeout(() => {
+    const unsubscribe = subscribeToAuthState(user => {
+      unsubscribe();
+      timer = setTimeout(() => {
         if (cancelled) {
           return;
         }
-        if (loggedIn) {
+        if (user) {
           navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
         } else {
           navigation.replace('Onboarding');
         }
       }, 1500);
-      return () => clearTimeout(timer);
     });
 
     return () => {
       cancelled = true;
+      unsubscribe();
+      clearTimeout(timer);
     };
   }, [navigation]);
 

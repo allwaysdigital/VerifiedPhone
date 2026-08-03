@@ -16,7 +16,7 @@ import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { setLoggedIn } from '../auth/authStorage';
+import { logout } from '../auth/firebaseAuth';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
 import { UploadField } from '../components/FormControls';
 import { GiftIcon, WarningIcon } from '../components/SubscriptionIcons';
@@ -128,7 +128,7 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   const handleLogout = async () => {
-    await setLoggedIn(false);
+    await logout();
     navigation
       .getParent<NativeStackNavigationProp<RootStackParamList>>()
       ?.reset({ index: 0, routes: [{ name: 'Login' }] });

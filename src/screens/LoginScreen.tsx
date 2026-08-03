@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import {
+  FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -16,13 +18,18 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import LogoMark from '../assets/logo_mark.svg';
 import { isValidMobile, MOBILE_MESSAGE } from '../utils/validators';
+import { getAuthErrorMessage, sendOtp } from '../auth/firebaseAuth';
+import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '../data/countryCodes';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  const [dialCode, setDialCode] = useState(DEFAULT_COUNTRY_CODE.dialCode);
+  const [codePickerVisible, setCodePickerVisible] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
 
   const handlePhoneChange = (text: string) => {
     setPhoneNumber(text.replace(/[^\d]/g, ''));
@@ -31,12 +38,20 @@ export default function LoginScreen({ navigation }: Props) {
     }
   };
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     if (!isValidMobile(phoneNumber)) {
       setError(MOBILE_MESSAGE);
       return;
     }
-    navigation.navigate('OtpVerify', { phoneNumber });
+    setSending(true);
+    try {
+      const confirmation = await sendOtp(dialCode, phoneNumber);
+      navigation.navigate('OtpVerify', { dialCode, phoneNumber, confirmation });
+    } catch (err) {
+      setError(getAuthErrorMessage(err, 'Could not send OTP. Please try again.'));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -53,19 +68,60 @@ export default function LoginScreen({ navigation }: Props) {
             <Text style={styles.titleHighlight}>phone number</Text>
           </Text>
           <View style={styles.fieldWrap}>
-            <TextInput
-              style={[styles.input, error ? styles.inputError : null]}
-              placeholder="Mobile Number."
-              placeholderTextColor={colors.textDisabled}
-              keyboardType="number-pad"
-              maxLength={10}
-              value={phoneNumber}
-              onChangeText={handlePhoneChange}
-            />
+            <View style={styles.phoneRow}>
+              <TouchableOpacity
+                style={styles.codeButton}
+                onPress={() => setCodePickerVisible(true)}>
+                <Text style={styles.codeButtonText}>{dialCode}</Text>
+                <Text style={styles.chevron}>⌄</Text>
+              </TouchableOpacity>
+              <TextInput
+                style={[styles.input, styles.phoneInput, error ? styles.inputError : null]}
+                placeholder="Mobile Number."
+                placeholderTextColor={colors.textDisabled}
+                keyboardType="number-pad"
+                maxLength={10}
+                value={phoneNumber}
+                onChangeText={handlePhoneChange}
+              />
+            </View>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </View>
-          <TouchableOpacity style={styles.button} onPress={handleSendOtp}>
-            <Text style={styles.buttonText}>Send OTP</Text>
+
+          <Modal
+            visible={codePickerVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setCodePickerVisible(false)}>
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPress={() => setCodePickerVisible(false)}>
+              <View style={styles.modalSheet}>
+                <FlatList
+                  data={COUNTRY_CODES}
+                  keyExtractor={item => item.dialCode}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.modalOption}
+                      onPress={() => {
+                        setDialCode(item.dialCode);
+                        setCodePickerVisible(false);
+                      }}>
+                      <Text style={styles.modalOptionText}>
+                        {item.flag} {item.name} ({item.dialCode})
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </TouchableOpacity>
+          </Modal>
+          <TouchableOpacity
+            style={[styles.button, sending && styles.buttonDisabled]}
+            onPress={handleSendOtp}
+            disabled={sending}>
+            <Text style={styles.buttonText}>{sending ? 'Sending OTP…' : 'Send OTP'}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
             <Text style={styles.registerText}>
@@ -118,6 +174,28 @@ const styles = StyleSheet.create({
   fieldWrap: {
     marginBottom: 24,
   },
+  phoneRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  codeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.inputBg,
+    borderRadius: 10,
+    height: 50,
+    paddingHorizontal: 12,
+  },
+  codeButtonText: {
+    fontFamily: fonts.robotoRegular,
+    fontSize: 16,
+    color: colors.text,
+  },
+  chevron: {
+    fontSize: 14,
+    color: colors.textDisabled,
+  },
   input: {
     fontFamily: fonts.robotoRegular,
     backgroundColor: colors.inputBg,
@@ -126,6 +204,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     color: colors.text,
+  },
+  phoneInput: {
+    flex: 1,
   },
   inputError: {
     borderWidth: 1,
@@ -144,6 +225,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
   buttonText: {
     fontFamily: fonts.robotoSemiBold,
     color: colors.white,
@@ -160,5 +244,25 @@ const styles = StyleSheet.create({
   },
   registerLink: {
     color: colors.primary,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '50%',
+    paddingVertical: 8,
+  },
+  modalOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: colors.text,
   },
 });
