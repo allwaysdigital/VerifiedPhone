@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: verifiedphone-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: FIREBASE_PROJECT_ID
+        value: verifiedphone-22f65
+      - key: MONGODB_URI
+        sync: false
