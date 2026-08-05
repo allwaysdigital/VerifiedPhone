@@ -20,7 +20,7 @@ import {
   FormSelect,
   UploadField,
 } from '../components/FormControls';
-import { getBrandNames } from '../data/brands';
+import { useShopData } from '../context/ShopDataContext';
 import {
   IMEI_MESSAGE,
   MOBILE_MESSAGE,
@@ -39,7 +39,6 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
-const BRAND_OPTIONS = getBrandNames();
 const CONDITION_OPTIONS = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
 const ACCESSORY_OPTIONS = ['Charger', 'Box', 'Cable', 'Handsfree', 'Original Bill'];
 
@@ -61,6 +60,8 @@ type FormErrors = {
 
 export default function AddPurchaseScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  const { brands } = useShopData();
+  const brandOptions = brands.map(b => b.name);
   const [brand, setBrand] = useState<string | null>(null);
   const [model, setModel] = useState('');
   const [color, setColor] = useState('');
@@ -144,7 +145,31 @@ export default function AddPurchaseScreen({ navigation }: Props) {
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
-    navigation.navigate('DigitalSignature');
+    navigation.navigate('DigitalSignature', {
+      purchaseData: {
+        brand: brand!,
+        model,
+        color,
+        ram,
+        storage,
+        condition: condition!,
+        batteryHealth,
+        imei1,
+        imei2,
+        purchasePrice,
+        expectedSale,
+        accessories,
+        fullName,
+        mobileNumber,
+        address,
+        city,
+        phoneFrontImage,
+        phoneBackImage,
+        oldPhoneBill,
+        aadhaarFront,
+        aadhaarBack,
+      },
+    });
   };
 
   return (
@@ -156,7 +181,7 @@ export default function AddPurchaseScreen({ navigation }: Props) {
             label="Brand"
             required
             placeholder="Select Brand"
-            options={BRAND_OPTIONS}
+            options={brandOptions}
             value={brand}
             error={errors.brand}
             onChange={value => {

@@ -1,0 +1,27 @@
+import path from 'path';
+import express from 'express';
+import cors from 'cors';
+import shopsRoutes from './routes/shops.routes';
+import devicesRoutes from './routes/devices.routes';
+import brandsRoutes from './routes/brands.routes';
+import subscriptionRoutes from './routes/subscription.routes';
+import { errorHandler } from './middleware/errorHandler';
+
+export function createApp() {
+  const app = express();
+
+  app.use(cors());
+  app.use(express.json());
+  app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+
+  app.get('/health', (_req, res) => res.json({ ok: true }));
+
+  app.use('/api/shops', shopsRoutes);
+  app.use('/api/devices', devicesRoutes);
+  app.use('/api/brands', brandsRoutes);
+  app.use('/api/subscription', subscriptionRoutes);
+
+  app.use(errorHandler);
+
+  return app;
+}

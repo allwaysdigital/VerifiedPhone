@@ -80,3 +80,9 @@ yarn-error.log
 # Firebase config (project-specific, not shared via source control)
 android/app/google-services.json
 ios/VerifiedPhone/GoogleService-Info.plist
+
+# Backend (server/)
+server/node_modules/
+server/dist/
+server/.env
+server/uploads/

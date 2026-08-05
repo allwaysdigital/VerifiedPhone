@@ -17,10 +17,10 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { logout } from '../auth/firebaseAuth';
+import { useShopData } from '../context/ShopDataContext';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
 import { UploadField } from '../components/FormControls';
 import { GiftIcon, WarningIcon } from '../components/SubscriptionIcons';
-import { getSubscription, type Subscription } from '../data/subscription';
 import {
   GST_MESSAGE,
   MOBILE_MESSAGE,
@@ -72,21 +72,29 @@ function LogoutIcon() {
 
 export default function SettingsScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const [shopName, setShopName] = useState('Mobile Hub');
-  const [gstNumber, setGstNumber] = useState('27AABCU9603R1ZM');
+  const { shop, subscription, updateShop } = useShopData();
+  const [shopName, setShopName] = useState('');
+  const [gstNumber, setGstNumber] = useState('');
   const [address, setAddress] = useState('');
-  const [contactNumber, setContactNumber] = useState('9876543210');
+  const [contactNumber, setContactNumber] = useState('');
   const [shopLogo, setShopLogo] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<Subscription>(() => getSubscription());
   const [errors, setErrors] = useState<FormErrors>({});
+  const [saving, setSaving] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      setSubscription(getSubscription());
-    }, []),
+      if (shop) {
+        setShopName(shop.shopName);
+        setGstNumber(shop.gstNumber);
+        setAddress(shop.address);
+        setContactNumber(shop.contactNumber);
+        setShopLogo(shop.logoUrl);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shop]),
   );
 
-  const hasAccess = subscription.status === 'trial' || subscription.status === 'active';
+  const hasAccess = subscription?.status === 'trial' || subscription?.status === 'active';
 
   const clearError = (field: keyof FormErrors) => {
     setErrors(prev => (prev[field] ? { ...prev, [field]: undefined } : prev));
@@ -109,13 +117,23 @@ export default function SettingsScreen({ navigation }: Props) {
     return nextErrors;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const nextErrors = validate();
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
-    // Persisting shop details is not wired to a backend yet.
+    setSaving(true);
+    try {
+      // A logo URI that already starts with http(s) is the existing server-hosted
+      // image, not a newly picked local file — only upload when it's a local URI.
+      const logoUri = shopLogo && !shopLogo.startsWith('http') ? shopLogo : null;
+      await updateShop({ shopName, gstNumber, address, contactNumber, logoUri });
+    } catch (err) {
+      setErrors({ shopName: 'Could not save shop details. Please try again.' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSubscriptionPress = () => {
@@ -208,8 +226,11 @@ export default function SettingsScreen({ navigation }: Props) {
 
           <UploadField label="Shop Logo" imageUri={shopLogo} onImageSelected={setShopLogo} />
 
-          <TouchableOpacity style={styles.button} onPress={handleSave}>
-            <Text style={styles.buttonText}>Save Shop Details</Text>
+          <TouchableOpacity
+            style={[styles.button, saving && styles.buttonDisabled]}
+            onPress={handleSave}
+            disabled={saving}>
+            <Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save Shop Details'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -224,9 +245,9 @@ export default function SettingsScreen({ navigation }: Props) {
           <View style={styles.subscriptionTextWrap}>
             <Text style={styles.subscriptionTitle}>Subscription</Text>
             <Text style={styles.subscriptionSubtitle}>
-              {subscription.status === 'trial'
+              {subscription?.status === 'trial'
                 ? 'Free trial active'
-                : subscription.status === 'active'
+                : subscription?.status === 'active'
                 ? 'Subscription active'
                 : 'No active subscription'}
             </Text>
@@ -333,6 +354,9 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     fontFamily: fonts.robotoRegular,

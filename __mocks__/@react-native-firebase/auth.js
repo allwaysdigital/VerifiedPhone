@@ -4,7 +4,9 @@ const mockConfirmationResult = {
 };
 
 module.exports = {
-  getAuth: jest.fn(() => ({})),
+  getAuth: jest.fn(() => ({
+    currentUser: { getIdToken: jest.fn().mockResolvedValue('mock-id-token') },
+  })),
   onAuthStateChanged: jest.fn((_auth, callback) => {
     callback(null);
     return jest.fn();

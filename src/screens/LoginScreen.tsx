@@ -23,7 +23,7 @@ import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '../data/countryCodes';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
-export default function LoginScreen({ navigation }: Props) {
+export default function LoginScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const [dialCode, setDialCode] = useState(DEFAULT_COUNTRY_CODE.dialCode);
   const [codePickerVisible, setCodePickerVisible] = useState(false);
@@ -46,7 +46,12 @@ export default function LoginScreen({ navigation }: Props) {
     setSending(true);
     try {
       const confirmation = await sendOtp(dialCode, phoneNumber);
-      navigation.navigate('OtpVerify', { dialCode, phoneNumber, confirmation });
+      navigation.navigate('OtpVerify', {
+        dialCode,
+        phoneNumber,
+        confirmation,
+        pendingShopDetails: route.params?.pendingShopDetails,
+      });
     } catch (err) {
       setError(getAuthErrorMessage(err, 'Could not send OTP. Please try again.'));
     } finally {

@@ -65,7 +65,15 @@ export default function RegisterScreen({ navigation }: Props) {
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
-    navigation.navigate('Login');
+    navigation.navigate('Login', {
+      pendingShopDetails: {
+        shopName,
+        gstNumber,
+        address,
+        contactNumber,
+        shopLogoUri: shopLogo,
+      },
+    });
   };
 
   return (

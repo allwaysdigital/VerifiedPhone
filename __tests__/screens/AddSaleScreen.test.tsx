@@ -3,21 +3,52 @@
  */
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import AddSaleScreen from '../../src/screens/AddSaleScreen';
-import { devices } from '../../src/data/devices';
+import { ShopDataContext } from '../../src/context/ShopDataContext';
+import { createMockShopDataContext } from '../../test-utils/mockShopData';
 import { createMockNavigation } from '../../test-utils/mockNavigation';
+import type { Device } from '../../src/types/domain';
 
-function renderScreen() {
-  const navigation = createMockNavigation();
-  render(
-    <AddSaleScreen navigation={navigation} route={{ params: undefined } as any} />,
-  );
-  return { navigation };
-}
+const firstAvailableDevice: Device = {
+  id: 'dev-1',
+  brand: 'Apple',
+  model: 'Apple iPhone 13 Pro',
+  status: 'Available',
+  verification: 'Verified',
+  color: 'Sierra Blue',
+  condition: 'Excellent',
+  ram: '6GB',
+  storage: '256GB',
+  batteryHealth: 89,
+  purchaseDate: '20/2/2026',
+  accessories: ['Charger'],
+  imei1: '356789012345678',
+  purchasePrice: 55000,
+  expectedSalePrice: 62000,
+  profit: 7000,
+  profitPercent: 12.7,
+  sellerName: 'Rahul Sharma',
+  sellerMobile: '+91 98765 43210',
+  sellerCity: 'Mumbai, Maharashtra',
+};
 
-const firstAvailableDevice = devices.find(d => d.status === 'Available')!;
 const firstAvailableLabel = `${firstAvailableDevice.model} - ₹${firstAvailableDevice.expectedSalePrice.toLocaleString('en-IN')}`;
+
+function renderScreen(shopDataOverrides: Parameters<typeof createMockShopDataContext>[0] = {}) {
+  const navigation = createMockNavigation();
+  const shopData = createMockShopDataContext({
+    devices: [firstAvailableDevice],
+    markDeviceSold: jest.fn().mockResolvedValue({ ...firstAvailableDevice, status: 'Sold' }),
+    ...shopDataOverrides,
+  });
+  render(
+    <ShopDataContext.Provider value={shopData}>
+      <AddSaleScreen navigation={navigation} route={{ params: undefined } as any} />
+    </ShopDataContext.Provider>,
+  );
+  return { navigation, shopData };
+}
 
 describe('AddSaleScreen', () => {
   test('does not navigate and shows every required-field error when submitted empty', () => {
@@ -47,8 +78,8 @@ describe('AddSaleScreen', () => {
     expect(screen.getByText('Enter a valid 10-digit mobile number')).toBeTruthy();
   });
 
-  test('submits and navigates to InvoicePreview once the form is fully valid', () => {
-    const { navigation } = renderScreen();
+  test('submits and navigates to InvoicePreview once the form is fully valid', async () => {
+    const { navigation, shopData } = renderScreen();
 
     fireEvent.press(screen.getByText('Select Phone'));
     fireEvent.press(screen.getByText(firstAvailableLabel));
@@ -59,14 +90,27 @@ describe('AddSaleScreen', () => {
 
     fireEvent.press(screen.getByText('Complete Sale & Generate Invoice'));
 
-    expect(navigation.navigate).toHaveBeenCalledWith(
-      'InvoicePreview',
-      expect.objectContaining({
-        deviceId: firstAvailableDevice.id,
-        customerName: 'Test Customer',
-        customerMobile: '9876543210',
-        salePrice: firstAvailableDevice.expectedSalePrice,
-      }),
+    await waitFor(() =>
+      expect(shopData.markDeviceSold).toHaveBeenCalledWith(
+        firstAvailableDevice.id,
+        expect.objectContaining({
+          buyerName: 'Test Customer',
+          buyerMobile: '9876543210',
+          salePrice: firstAvailableDevice.expectedSalePrice,
+        }),
+      ),
+    );
+
+    await waitFor(() =>
+      expect(navigation.navigate).toHaveBeenCalledWith(
+        'InvoicePreview',
+        expect.objectContaining({
+          deviceId: firstAvailableDevice.id,
+          customerName: 'Test Customer',
+          customerMobile: '9876543210',
+          salePrice: firstAvailableDevice.expectedSalePrice,
+        }),
+      ),
     );
   });
 

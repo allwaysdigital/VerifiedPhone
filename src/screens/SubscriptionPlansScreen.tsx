@@ -8,7 +8,7 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import BackButton from '../components/BackButton';
 import { CrownIcon, StarIcon } from '../components/SubscriptionIcons';
-import { PLANS, PLAN_FEATURES, type PlanDefinition } from '../data/subscription';
+import { PLANS, PLAN_FEATURES, type PlanDefinition } from '../types/domain';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SubscriptionPlans'>;
 

@@ -8,7 +8,8 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { FormInput, FormSection, FormSelect } from '../components/FormControls';
 import BackButton from '../components/BackButton';
-import { devices, type Device } from '../data/devices';
+import { useShopData } from '../context/ShopDataContext';
+import type { Device } from '../types/domain';
 import {
   MOBILE_MESSAGE,
   PRICE_MESSAGE,
@@ -20,7 +21,6 @@ import {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddSale'>;
 
-const AVAILABLE_DEVICES = devices.filter(d => d.status === 'Available');
 const PAYMENT_MODE_OPTIONS = ['Cash', 'UPI', 'Bank Transfer', 'Card'];
 
 function phoneLabel(device: Device): string {
@@ -38,8 +38,10 @@ function DetailField({ label, value }: { label: string; value: string }) {
 
 export default function AddSaleScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  const { devices, markDeviceSold } = useShopData();
+  const availableDevices = devices.filter(d => d.status === 'Available');
   const [selectedPhone, setSelectedPhone] = useState<string | null>(() => {
-    const preselected = AVAILABLE_DEVICES.find(d => d.id === route.params?.deviceId);
+    const preselected = availableDevices.find(d => d.id === route.params?.deviceId);
     return preselected ? phoneLabel(preselected) : null;
   });
   const [customerName, setCustomerName] = useState('');
@@ -49,13 +51,15 @@ export default function AddSaleScreen({ navigation, route }: Props) {
   const [paymentMode, setPaymentMode] = useState<string | null>(null);
   const [warrantyPeriod, setWarrantyPeriod] = useState('');
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const selectedDevice =
-    AVAILABLE_DEVICES.find(d => phoneLabel(d) === selectedPhone) ?? null;
+    availableDevices.find(d => phoneLabel(d) === selectedPhone) ?? null;
 
   const handleSelectPhone = (label: string) => {
     setSelectedPhone(label);
-    const device = AVAILABLE_DEVICES.find(d => phoneLabel(d) === label);
+    const device = availableDevices.find(d => phoneLabel(d) === label);
     if (device) {
       setSalePrice(String(device.expectedSalePrice));
     }
@@ -76,19 +80,34 @@ export default function AddSaleScreen({ navigation, route }: Props) {
   const canComplete = Object.values(errors).every(error => !error);
   const showErrors = attemptedSubmit;
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setAttemptedSubmit(true);
-    if (!canComplete || !selectedDevice) {
+    if (!canComplete || !selectedDevice || submitting) {
       return;
     }
-    navigation.navigate('InvoicePreview', {
-      deviceId: selectedDevice.id,
-      customerName,
-      customerMobile,
-      customerAddress,
-      salePrice: salePriceNum,
-      warrantyPeriod,
-    });
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await markDeviceSold(selectedDevice.id, {
+        buyerName: customerName,
+        buyerMobile: customerMobile,
+        buyerAddress: customerAddress,
+        salePrice: salePriceNum,
+        warrantyPeriod,
+      });
+      navigation.navigate('InvoicePreview', {
+        deviceId: selectedDevice.id,
+        customerName,
+        customerMobile,
+        customerAddress,
+        salePrice: salePriceNum,
+        warrantyPeriod,
+      });
+    } catch (err) {
+      setSubmitError('Could not complete this sale. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -103,7 +122,7 @@ export default function AddSaleScreen({ navigation, route }: Props) {
           <FormSelect
             label=""
             placeholder="Select Phone"
-            options={AVAILABLE_DEVICES.map(phoneLabel)}
+            options={availableDevices.map(phoneLabel)}
             value={selectedPhone}
             error={showErrors ? errors.selectedPhone : undefined}
             onChange={handleSelectPhone}
@@ -212,10 +231,17 @@ export default function AddSaleScreen({ navigation, route }: Props) {
           ) : null}
         </View>
 
+        {submitError ? <Text style={styles.submitErrorText}>{submitError}</Text> : null}
         <TouchableOpacity
-          style={[styles.completeButton, !canComplete && styles.completeButtonDisabled]}
-          onPress={handleComplete}>
-          <Text style={styles.completeButtonText}>Complete Sale & Generate Invoice</Text>
+          style={[
+            styles.completeButton,
+            (!canComplete || submitting) && styles.completeButtonDisabled,
+          ]}
+          onPress={handleComplete}
+          disabled={submitting}>
+          <Text style={styles.completeButtonText}>
+            {submitting ? 'Completing…' : 'Complete Sale & Generate Invoice'}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -322,6 +348,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.primary,
+  },
+  submitErrorText: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginHorizontal: 16,
+    marginTop: 16,
   },
   completeButton: {
     backgroundColor: colors.greenDark,

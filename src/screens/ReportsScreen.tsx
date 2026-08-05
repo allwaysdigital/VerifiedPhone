@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
+import { useShopData } from '../context/ShopDataContext';
+import { formatINR, formatLakhs } from '../utils/format';
+import type { Device } from '../types/domain';
 import BarChart, { ChartSeries } from '../components/BarChart';
 
 type Period = 'Daily' | 'Monthly' | 'Yearly';
@@ -11,10 +14,10 @@ const PERIODS: Period[] = ['Daily', 'Monthly', 'Yearly'];
 type PeriodData = {
   purchaseLabel: string;
   purchaseValue: string;
-  purchaseCaption?: string;
+  purchaseCaption: string;
   saleLabel: string;
   saleValue: string;
-  saleCaption?: string;
+  saleCaption: string;
   netProfit: string;
   chartTitle: string;
   categories: string[];
@@ -25,57 +28,137 @@ type PeriodData = {
   profit: number[];
 };
 
-const DATA: Record<Period, PeriodData> = {
+const PERIOD_META: Record<
+  Period,
+  { purchaseLabel: string; saleLabel: string; chartTitle: string; bucketCount: number; formatValue: (n: number) => string }
+> = {
   Daily: {
     purchaseLabel: 'Total Purchase',
-    purchaseValue: '₹0',
-    purchaseCaption: '0 devices',
     saleLabel: 'Total Sale',
-    saleValue: '₹41,500',
-    saleCaption: '1 devices',
-    netProfit: '₹3,500',
     chartTitle: 'Last 7 Days Trend',
-    categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    yMax: 80000,
-    yStep: 20000,
-    purchase: [51000, 44000, 39000, 44000, 55000, 60000, 44000],
-    sale: [59000, 75000, 34000, 72000, 64000, 54000, 69000],
-    profit: [25000, 20000, 56000, 36000, 20000, 13000, 32000],
+    bucketCount: 7,
+    formatValue: formatINR,
   },
   Monthly: {
     purchaseLabel: 'This Month Purchase',
-    purchaseValue: '₹5.8L',
     saleLabel: 'This Month Sale',
-    saleValue: '₹6.5L',
-    netProfit: '₹3,500',
     chartTitle: 'Last 6 Months Trend',
-    categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    yMax: 800000,
-    yStep: 200000,
-    purchase: [510000, 400000, 440000, 390000, 440000, 610000],
-    sale: [590000, 340000, 750000, 340000, 690000, 540000],
-    profit: [250000, 560000, 190000, 560000, 320000, 130000],
+    bucketCount: 6,
+    formatValue: formatLakhs,
   },
   Yearly: {
     purchaseLabel: 'This Year Purchase',
-    purchaseValue: '₹5.8L',
     saleLabel: 'This Year Sale',
-    saleValue: '₹6.5L',
-    netProfit: '₹3,500',
     chartTitle: 'Last 5 Years Trend',
-    categories: ['2020', '2021', '2022', '2023', '2024'],
-    yMax: 800000,
-    yStep: 200000,
-    purchase: [510000, 440000, 440000, 390000, 610000],
-    sale: [590000, 690000, 750000, 340000, 540000],
-    profit: [250000, 320000, 190000, 560000, 130000],
+    bucketCount: 5,
+    formatValue: formatLakhs,
   },
 };
 
+function parseDMY(value?: string): Date | null {
+  if (!value) {
+    return null;
+  }
+  const [day, month, year] = value.split('/').map(Number);
+  if (!day || !month || !year) {
+    return null;
+  }
+  return new Date(year, month - 1, day);
+}
+
+function niceYAxis(maxValue: number): { yMax: number; yStep: number } {
+  const safeMax = Math.max(maxValue, 4);
+  const yMax = Math.ceil((safeMax * 1.2) / 4) * 4;
+  return { yMax, yStep: yMax / 4 };
+}
+
+function buildPeriodData(period: Period, devices: Device[]): PeriodData {
+  const meta = PERIOD_META[period];
+  const now = new Date();
+  let categories: string[];
+  let bucketIndex: (date: Date) => number;
+
+  if (period === 'Daily') {
+    const days: Date[] = Array.from({ length: meta.bucketCount }, (_, i) => {
+      const d = new Date(now);
+      d.setDate(now.getDate() - (meta.bucketCount - 1 - i));
+      return d;
+    });
+    categories = days.map(d => d.toLocaleDateString('en-US', { weekday: 'short' }));
+    bucketIndex = date => days.findIndex(d => d.toDateString() === date.toDateString());
+  } else if (period === 'Monthly') {
+    const months: Date[] = Array.from(
+      { length: meta.bucketCount },
+      (_, i) => new Date(now.getFullYear(), now.getMonth() - (meta.bucketCount - 1 - i), 1),
+    );
+    categories = months.map(d => d.toLocaleDateString('en-US', { month: 'short' }));
+    bucketIndex = date =>
+      months.findIndex(d => d.getFullYear() === date.getFullYear() && d.getMonth() === date.getMonth());
+  } else {
+    const years: number[] = Array.from(
+      { length: meta.bucketCount },
+      (_, i) => now.getFullYear() - (meta.bucketCount - 1 - i),
+    );
+    categories = years.map(String);
+    bucketIndex = date => years.indexOf(date.getFullYear());
+  }
+
+  const purchase = new Array(categories.length).fill(0);
+  const sale = new Array(categories.length).fill(0);
+  const profit = new Array(categories.length).fill(0);
+  let purchaseCount = 0;
+  let saleCount = 0;
+
+  devices.forEach(device => {
+    const purchaseDate = parseDMY(device.purchaseDate);
+    if (purchaseDate) {
+      const idx = bucketIndex(purchaseDate);
+      if (idx >= 0) {
+        purchase[idx] += device.purchasePrice;
+        purchaseCount += 1;
+      }
+    }
+    if (device.status === 'Sold') {
+      const saleDate = parseDMY(device.saleDate);
+      if (saleDate) {
+        const idx = bucketIndex(saleDate);
+        if (idx >= 0) {
+          sale[idx] += device.salePrice ?? 0;
+          profit[idx] += device.profit;
+          saleCount += 1;
+        }
+      }
+    }
+  });
+
+  const purchaseTotal = purchase.reduce((a, b) => a + b, 0);
+  const saleTotal = sale.reduce((a, b) => a + b, 0);
+  const profitTotal = profit.reduce((a, b) => a + b, 0);
+  const { yMax, yStep } = niceYAxis(Math.max(...purchase, ...sale, ...profit, 0));
+
+  return {
+    purchaseLabel: meta.purchaseLabel,
+    purchaseValue: meta.formatValue(purchaseTotal),
+    purchaseCaption: `${purchaseCount} device${purchaseCount === 1 ? '' : 's'}`,
+    saleLabel: meta.saleLabel,
+    saleValue: meta.formatValue(saleTotal),
+    saleCaption: `${saleCount} device${saleCount === 1 ? '' : 's'}`,
+    netProfit: meta.formatValue(profitTotal),
+    chartTitle: meta.chartTitle,
+    categories,
+    yMax,
+    yStep,
+    purchase,
+    sale,
+    profit,
+  };
+}
+
 export default function ReportsScreen() {
   useScreenStatusBar('dark-content', colors.white);
+  const { devices } = useShopData();
   const [period, setPeriod] = useState<Period>('Daily');
-  const data = DATA[period];
+  const data = useMemo(() => buildPeriodData(period, devices), [period, devices]);
 
   const series: ChartSeries[] = [
     { name: 'Purchase', color: colors.blue, values: data.purchase },

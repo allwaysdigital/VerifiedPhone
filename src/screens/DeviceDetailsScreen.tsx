@@ -5,7 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { devices } from '../data/devices';
+import { useShopData } from '../context/ShopDataContext';
 import Badge from '../components/Badge';
 import BackButton from '../components/BackButton';
 import UploadIcon from '../assets/icons/upload_icon.svg';
@@ -31,7 +31,21 @@ function DetailField({ label, value }: { label: string; value: string }) {
 
 export default function DeviceDetailsScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const device = devices.find(d => d.id === route.params.deviceId) ?? devices[0];
+  const { devices } = useShopData();
+  const device = devices.find(d => d.id === route.params.deviceId);
+
+  if (!device) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.headerRow}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <Text style={styles.headerTitle}>Device Details</Text>
+        </View>
+        <Text style={styles.notFoundText}>Device not found.</Text>
+      </SafeAreaView>
+    );
+  }
+
   const isSold = device.status === 'Sold';
 
   const handleMarkAsSold = () => {
@@ -218,6 +232,12 @@ const styles = StyleSheet.create({
   editIcon: {
     fontSize: 20,
     color: colors.text,
+  },
+  notFoundText: {
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 15,
+    color: colors.textMuted,
   },
   scrollContent: {
     paddingHorizontal: 16,

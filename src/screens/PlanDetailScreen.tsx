@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,7 +7,8 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import BackButton from '../components/BackButton';
-import { PLANS, PLAN_FEATURES, TRIAL_DAYS, startTrial } from '../data/subscription';
+import { PLANS, PLAN_FEATURES, TRIAL_DAYS } from '../types/domain';
+import { useShopData } from '../context/ShopDataContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PlanDetail'>;
 
@@ -24,6 +25,8 @@ const SUBSCRIPTION_TERMS = [
 
 export default function PlanDetailScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  const { startTrial } = useShopData();
+  const [subscribing, setSubscribing] = useState(false);
   const plan = PLANS[route.params.planId];
   const firstBillingDate = formatFirstBillingDate();
   const terms = [
@@ -33,9 +36,17 @@ export default function PlanDetailScreen({ navigation, route }: Props) {
     'No hidden charges or setup fees',
   ];
 
-  const handleSubscribe = () => {
-    startTrial(plan.id);
-    navigation.navigate('TrialActivated', { planId: plan.id });
+  const handleSubscribe = async () => {
+    if (subscribing) {
+      return;
+    }
+    setSubscribing(true);
+    try {
+      await startTrial(plan.id);
+      navigation.navigate('TrialActivated', { planId: plan.id });
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   return (
@@ -78,8 +89,13 @@ export default function PlanDetailScreen({ navigation, route }: Props) {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.subscribeButton} onPress={handleSubscribe}>
-          <Text style={styles.subscribeButtonText}>Subscribe Now</Text>
+        <TouchableOpacity
+          style={[styles.subscribeButton, subscribing && styles.buttonDisabled]}
+          onPress={handleSubscribe}
+          disabled={subscribing}>
+          <Text style={styles.subscribeButtonText}>
+            {subscribing ? 'Subscribing…' : 'Subscribe Now'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -225,5 +241,8 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: '700',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });

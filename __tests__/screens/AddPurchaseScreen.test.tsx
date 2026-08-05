@@ -5,6 +5,8 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import AddPurchaseScreen from '../../src/screens/AddPurchaseScreen';
+import { ShopDataContext } from '../../src/context/ShopDataContext';
+import { createMockShopDataContext } from '../../test-utils/mockShopData';
 import { createMockNavigation } from '../../test-utils/mockNavigation';
 
 async function pickImageFor(testID: string) {
@@ -15,7 +17,14 @@ async function pickImageFor(testID: string) {
 
 function renderScreen() {
   const navigation = createMockNavigation();
-  render(<AddPurchaseScreen navigation={navigation} route={{} as any} />);
+  const shopData = createMockShopDataContext({
+    brands: [{ id: '1', name: 'Apple' }],
+  });
+  render(
+    <ShopDataContext.Provider value={shopData}>
+      <AddPurchaseScreen navigation={navigation} route={{} as any} />
+    </ShopDataContext.Provider>,
+  );
   return { navigation };
 }
 
@@ -73,7 +82,20 @@ describe('AddPurchaseScreen', () => {
 
     fireEvent.press(screen.getByText('Save'));
 
-    expect(navigation.navigate).toHaveBeenCalledWith('DigitalSignature');
+    expect(navigation.navigate).toHaveBeenCalledWith(
+      'DigitalSignature',
+      expect.objectContaining({
+        purchaseData: expect.objectContaining({
+          brand: 'Apple',
+          model: 'iPhone 15',
+          condition: 'New',
+          imei1: '123456789012345',
+          purchasePrice: '50000',
+          fullName: 'John Doe',
+          mobileNumber: '9876543210',
+        }),
+      }),
+    );
   });
 
   test('picking a photo clears the required-upload error and shows a preview', async () => {

@@ -15,6 +15,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { getAuthErrorMessage, sendOtp } from '../auth/firebaseAuth';
+import { useShopData } from '../context/ShopDataContext';
 import LogoMark from '../assets/logo_mark.svg';
 import { isValidOtp } from '../utils/validators';
 
@@ -23,7 +24,8 @@ const OTP_LENGTH = 6;
 
 export default function OtpVerifyScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const { dialCode, phoneNumber } = route.params;
+  const { registerShop } = useShopData();
+  const { dialCode, phoneNumber, pendingShopDetails } = route.params;
   const [confirmation, setConfirmation] = useState(route.params.confirmation);
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
@@ -45,6 +47,15 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
     setVerifying(true);
     try {
       await confirmation.confirm(otp);
+      if (pendingShopDetails) {
+        await registerShop({
+          shopName: pendingShopDetails.shopName,
+          gstNumber: pendingShopDetails.gstNumber,
+          address: pendingShopDetails.address,
+          contactNumber: pendingShopDetails.contactNumber,
+          logoUri: pendingShopDetails.shopLogoUri,
+        });
+      }
       navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
     } catch (err) {
       setError(getAuthErrorMessage(err, 'Invalid OTP. Please try again.'));

@@ -8,7 +8,7 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import BackButton from '../components/BackButton';
 import InvoiceIcon from '../assets/icons/invoice_icon.svg';
-import { devices } from '../data/devices';
+import { useShopData } from '../context/ShopDataContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PoliceExportRecord'>;
 
@@ -40,8 +40,21 @@ function formatDateTime(date: Date): string {
 
 export default function PoliceExportRecordScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const device = devices.find(d => d.id === route.params.deviceId) ?? devices[0];
+  const { devices } = useShopData();
+  const device = devices.find(d => d.id === route.params.deviceId);
   const [recordGenerated] = useState(() => formatDateTime(new Date()));
+
+  if (!device) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.headerRow}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <Text style={styles.headerTitle}>Police Export Record</Text>
+        </View>
+        <Text style={styles.notFoundText}>Device not found.</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -166,6 +179,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textFaint,
     marginTop: 2,
+  },
+  notFoundText: {
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 15,
+    color: colors.textMuted,
   },
   scrollContent: {
     paddingHorizontal: 16,

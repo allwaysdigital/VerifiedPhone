@@ -6,15 +6,16 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { CalendarIcon, CardIcon, PhoneOutlineIcon } from '../components/SubscriptionIcons';
-import { PLANS, formatSubscriptionDate, getSubscription } from '../data/subscription';
+import { PLANS, formatSubscriptionDate } from '../types/domain';
+import { useShopData } from '../context/ShopDataContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TrialActivated'>;
 
 export default function TrialActivatedScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  const { subscription } = useShopData();
   const plan = PLANS[route.params.planId];
-  const subscription = getSubscription();
-  const trialEndsDate = subscription.trialEndsAt
+  const trialEndsDate = subscription?.trialEndsAt
     ? formatSubscriptionDate(subscription.trialEndsAt)
     : '';
 

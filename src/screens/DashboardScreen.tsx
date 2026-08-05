@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -8,6 +8,9 @@ import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
+import { useShopData } from '../context/ShopDataContext';
+import { formatLakhs } from '../utils/format';
+import EmptyState from '../components/EmptyState';
 import HeaderLogo from '../assets/icons/header_logo.svg';
 import StockBoxIcon from '../assets/icons/stock_box.svg';
 import PurchaseCartIcon from '../assets/icons/purchase_cart.svg';
@@ -67,17 +70,57 @@ function QuickAction({ label, iconBg, icon, round, onPress }: QuickActionProps) 
 
 type BrandRow = { brand: string; units: string; value: string };
 
-const brandDistribution: BrandRow[] = [
-  { brand: 'Apple', units: '15 units', value: '₹8.5L' },
-  { brand: 'Samsung', units: '22 units', value: '₹9.5L' },
-  { brand: 'OnePlus', units: '18 units', value: '₹5.5L' },
-  { brand: 'Xiaomi', units: '25 units', value: '₹7.5L' },
-  { brand: 'Others', units: '12 units', value: '₹3.5L' },
-];
+function todayLabel(): string {
+  const d = new Date();
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+}
 
 export default function DashboardScreen({ navigation }: Props) {
   useScreenStatusBar('light-content', colors.primary);
   const insets = useSafeAreaInsets();
+  const { devices } = useShopData();
+
+  const today = todayLabel();
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const stats = useMemo(() => {
+    const availableCount = devices.filter(d => d.status === 'Available').length;
+    const purchasedToday = devices.filter(d => d.purchaseDate === today);
+    const soldToday = devices.filter(d => d.status === 'Sold' && d.saleDate === today);
+    const todayPurchaseTotal = purchasedToday.reduce((sum, d) => sum + d.purchasePrice, 0);
+    const todaySaleTotal = soldToday.reduce((sum, d) => sum + (d.salePrice ?? 0), 0);
+    const todayProfitTotal = soldToday.reduce((sum, d) => sum + d.profit, 0);
+    return {
+      availableCount,
+      purchasedTodayCount: purchasedToday.length,
+      soldTodayCount: soldToday.length,
+      todayPurchaseTotal,
+      todaySaleTotal,
+      todayProfitTotal,
+    };
+  }, [devices, today]);
+
+  const brandDistribution = useMemo<BrandRow[]>(() => {
+    const byBrand = new Map<string, { units: number; value: number }>();
+    devices.forEach(device => {
+      const entry = byBrand.get(device.brand) ?? { units: 0, value: 0 };
+      entry.units += 1;
+      entry.value += device.purchasePrice;
+      byBrand.set(device.brand, entry);
+    });
+    return Array.from(byBrand.entries())
+      .map(([brand, { units, value }]) => ({
+        brand,
+        units: `${units} unit${units === 1 ? '' : 's'}`,
+        value: formatLakhs(value),
+      }))
+      .sort((a, b) => a.brand.localeCompare(b.brand));
+  }, [devices]);
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
@@ -92,14 +135,14 @@ export default function DashboardScreen({ navigation }: Props) {
               </Text>
             </View>
           </View>
-          <Text style={styles.headerDate}>Tuesday, Feb 25, 2026</Text>
+          <Text style={styles.headerDate}>{currentDate}</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Today's Overview</Text>
         <View style={styles.statsGrid}>
           <StatCard
             label="Total Stock"
-            value="4"
+            value={String(stats.availableCount)}
             caption="Brand & Model :"
             valueColor={colors.primary}
             iconBg={colors.primary}
@@ -107,23 +150,23 @@ export default function DashboardScreen({ navigation }: Props) {
           />
           <StatCard
             label="Today Purchase"
-            value="₹0"
-            caption="0 devices"
+            value={`₹${stats.todayPurchaseTotal.toLocaleString('en-IN')}`}
+            caption={`${stats.purchasedTodayCount} devices`}
             valueColor={colors.purple}
             iconBg={colors.purple}
             icon={<PurchaseCartIcon width={32} height={32} />}
           />
           <StatCard
             label="Today Sale"
-            value="₹41,500"
-            caption="1 devices"
+            value={`₹${stats.todaySaleTotal.toLocaleString('en-IN')}`}
+            caption={`${stats.soldTodayCount} devices`}
             valueColor={colors.green}
             iconBg={colors.green}
             icon={<SaleDollarIcon width={32} height={32} />}
           />
           <StatCard
             label="Today Profit"
-            value="₹3,500"
+            value={`₹${stats.todayProfitTotal.toLocaleString('en-IN')}`}
             valueColor={colors.greenDark}
             iconBg={colors.greenDark}
             icon={<ProfitChartIcon width={32} height={32} />}
@@ -149,19 +192,23 @@ export default function DashboardScreen({ navigation }: Props) {
         </View>
 
         <Text style={styles.sectionTitle}>Brand-wise Distribution</Text>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => navigation.navigate('Brands')}>
-          <View style={styles.brandCard}>
-            {brandDistribution.map(row => (
-              <View key={row.brand} style={styles.brandRow}>
-                <Text style={styles.brandName}>{row.brand}</Text>
-                <Text style={styles.brandUnits}>{row.units}</Text>
-                <Text style={styles.brandValue}>{row.value}</Text>
-              </View>
-            ))}
-          </View>
-        </TouchableOpacity>
+        {brandDistribution.length === 0 ? (
+          <EmptyState message="No stock yet" />
+        ) : (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('Brands')}>
+            <View style={styles.brandCard}>
+              {brandDistribution.map(row => (
+                <View key={row.brand} style={styles.brandRow}>
+                  <Text style={styles.brandName}>{row.brand}</Text>
+                  <Text style={styles.brandUnits}>{row.units}</Text>
+                  <Text style={styles.brandValue}>{row.value}</Text>
+                </View>
+              ))}
+            </View>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

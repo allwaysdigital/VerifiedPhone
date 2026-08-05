@@ -28,6 +28,10 @@ export function logout(): Promise<void> {
   return signOut(auth);
 }
 
+export function getIdToken(): Promise<string | null> {
+  return auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(null);
+}
+
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/invalid-phone-number': 'Enter a valid 10-digit mobile number.',
   'auth/missing-phone-number': 'Enter a valid 10-digit mobile number.',

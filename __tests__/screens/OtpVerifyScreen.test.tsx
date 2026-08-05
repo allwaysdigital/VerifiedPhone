@@ -5,6 +5,8 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import OtpVerifyScreen from '../../src/screens/OtpVerifyScreen';
+import { ShopDataContext } from '../../src/context/ShopDataContext';
+import { createMockShopDataContext } from '../../test-utils/mockShopData';
 import { createMockNavigation } from '../../test-utils/mockNavigation';
 
 function createConfirmation(overrides: Partial<{ confirm: jest.Mock }> = {}) {
@@ -17,13 +19,16 @@ function createConfirmation(overrides: Partial<{ confirm: jest.Mock }> = {}) {
 
 function renderScreen(confirmation = createConfirmation()) {
   const navigation = createMockNavigation();
+  const shopData = createMockShopDataContext();
   render(
-    <OtpVerifyScreen
-      navigation={navigation}
-      route={{ params: { phoneNumber: '9876543210', confirmation } } as any}
-    />,
+    <ShopDataContext.Provider value={shopData}>
+      <OtpVerifyScreen
+        navigation={navigation}
+        route={{ params: { phoneNumber: '9876543210', confirmation } } as any}
+      />
+    </ShopDataContext.Provider>,
   );
-  return { navigation, confirmation };
+  return { navigation, confirmation, shopData };
 }
 
 describe('OtpVerifyScreen', () => {

@@ -10,7 +10,8 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import BackButton from '../components/BackButton';
 import InvoiceIcon from '../assets/icons/invoice_icon.svg';
-import { devices, type Device } from '../data/devices';
+import { useShopData } from '../context/ShopDataContext';
+import type { Device } from '../types/domain';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InvoicePreview'>;
 
@@ -126,11 +127,24 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const { deviceId, customerName, customerMobile, customerAddress, salePrice, warrantyPeriod } =
     route.params;
-  const device = devices.find(d => d.id === deviceId) ?? devices[0];
+  const { devices } = useShopData();
+  const device = devices.find(d => d.id === deviceId);
   const [invoiceNumber] = useState(() => `SAL${Date.now()}`);
   const [invoiceDate] = useState(() => formatDate(new Date()));
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+
+  if (!device) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.headerRow}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <Text style={styles.headerTitle}>Invoice Preview</Text>
+        </View>
+        <Text style={styles.notFoundText}>Device not found.</Text>
+      </SafeAreaView>
+    );
+  }
 
   const handleBackToDashboard = () => {
     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
@@ -346,6 +360,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.robotoSemiBold,
     fontSize: 18,
     color: colors.text,
+  },
+  notFoundText: {
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 15,
+    color: colors.textMuted,
   },
   scrollContent: {
     paddingHorizontal: 16,

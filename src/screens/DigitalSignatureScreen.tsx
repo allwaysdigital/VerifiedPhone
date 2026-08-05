@@ -13,22 +13,60 @@ import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { FormCheckbox } from '../components/FormControls';
 import SignaturePad, { SignaturePadHandle } from '../components/SignaturePad';
+import { useShopData } from '../context/ShopDataContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DigitalSignature'>;
 
-export default function DigitalSignatureScreen({ navigation }: Props) {
+export default function DigitalSignatureScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  const { createDevice } = useShopData();
+  const { purchaseData } = route.params;
   const [confirmed, setConfirmed] = useState(false);
   const [signatureEmpty, setSignatureEmpty] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const padRef = useRef<SignaturePadHandle>(null);
 
-  const canSave = confirmed && !signatureEmpty;
+  const isDeclarationComplete = confirmed && !signatureEmpty;
+  const canSave = isDeclarationComplete && !saving;
 
-  const handleSaveSeller = () => {
+  const handleSaveSeller = async () => {
     if (!canSave) {
       return;
     }
-    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+    setSaving(true);
+    setError('');
+    try {
+      await createDevice({
+        brand: purchaseData.brand,
+        model: purchaseData.model,
+        color: purchaseData.color,
+        ram: purchaseData.ram,
+        storage: purchaseData.storage,
+        condition: purchaseData.condition,
+        batteryHealth: purchaseData.batteryHealth,
+        imei1: purchaseData.imei1,
+        imei2: purchaseData.imei2,
+        purchasePrice: purchaseData.purchasePrice,
+        expectedSalePrice: purchaseData.expectedSale,
+        accessories: purchaseData.accessories,
+        sellerName: purchaseData.fullName,
+        sellerMobile: purchaseData.mobileNumber,
+        sellerAddress: purchaseData.address,
+        sellerCity: purchaseData.city,
+        sellerDeclarationConfirmed: true,
+        phoneFrontImageUri: purchaseData.phoneFrontImage,
+        phoneBackImageUri: purchaseData.phoneBackImage,
+        oldPhoneBillUri: purchaseData.oldPhoneBill,
+        aadhaarFrontUri: purchaseData.aadhaarFront,
+        aadhaarBackUri: purchaseData.aadhaarBack,
+      });
+      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+    } catch (err) {
+      setError('Could not save this purchase. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -69,10 +107,10 @@ export default function DigitalSignatureScreen({ navigation }: Props) {
             style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
             onPress={handleSaveSeller}
             disabled={!canSave}>
-            <Text style={styles.saveButtonText}>Save Seller</Text>
+            <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save Seller'}</Text>
           </TouchableOpacity>
         </View>
-        {!canSave ? (
+        {!isDeclarationComplete ? (
           <Text style={styles.validationHint}>
             {signatureEmpty && !confirmed
               ? 'Please sign above and confirm the declaration to continue.'
@@ -81,6 +119,7 @@ export default function DigitalSignatureScreen({ navigation }: Props) {
               : 'Please confirm the declaration to continue.'}
           </Text>
         ) : null}
+        {error ? <Text style={styles.validationHint}>{error}</Text> : null}
       </ScrollView>
     </SafeAreaView>
   );

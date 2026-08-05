@@ -1,7 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
@@ -12,39 +11,48 @@ import { CalendarIcon, CardIcon, GiftIcon, WarningIcon } from '../components/Sub
 import {
   PLANS,
   PLAN_FEATURES,
-  cancelSubscription,
   formatSubscriptionDate,
-  getSubscription,
   getTrialDaysRemaining,
   TRIAL_DAYS,
-  type Subscription,
-} from '../data/subscription';
+} from '../types/domain';
+import { useShopData } from '../context/ShopDataContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ManageSubscription'>;
 
 export default function ManageSubscriptionScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const [subscription, setSubscription] = useState<Subscription>(() => getSubscription());
+  const { subscription, cancelSubscription } = useShopData();
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      setSubscription(getSubscription());
-    }, []),
-  );
-
-  const plan = subscription.planId ? PLANS[subscription.planId] : null;
-  const isTrial = subscription.status === 'trial';
-  const isActive = subscription.status === 'active';
+  const plan = subscription?.planId ? PLANS[subscription.planId] : null;
+  const isTrial = subscription?.status === 'trial';
+  const isActive = subscription?.status === 'active';
   const hasAccess = isTrial || isActive;
-  const trialEndsDate = subscription.trialEndsAt
+  const trialEndsDate = subscription?.trialEndsAt
     ? formatSubscriptionDate(subscription.trialEndsAt)
     : '';
-  const daysRemaining = getTrialDaysRemaining(subscription);
+  const daysRemaining = subscription ? getTrialDaysRemaining(subscription) : 0;
 
-  const handleConfirmCancel = () => {
-    setSubscription(cancelSubscription());
-    setCancelModalVisible(false);
+  if (!subscription) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.headerRow}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <Text style={styles.headerTitle}>Manage Subscription</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const handleConfirmCancel = async () => {
+    setCancelling(true);
+    try {
+      await cancelSubscription();
+    } finally {
+      setCancelling(false);
+      setCancelModalVisible(false);
+    }
   };
 
   return (
@@ -224,8 +232,13 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
                 onPress={() => setCancelModalVisible(false)}>
                 <Text style={styles.modalNoButtonText}>No</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalYesButton} onPress={handleConfirmCancel}>
-                <Text style={styles.modalYesButtonText}>Yes, Cancel</Text>
+              <TouchableOpacity
+                style={styles.modalYesButton}
+                onPress={handleConfirmCancel}
+                disabled={cancelling}>
+                <Text style={styles.modalYesButtonText}>
+                  {cancelling ? 'Cancelling…' : 'Yes, Cancel'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

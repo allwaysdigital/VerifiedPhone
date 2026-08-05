@@ -14,8 +14,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { devices, Device } from '../data/devices';
+import { useShopData } from '../context/ShopDataContext';
+import type { Device } from '../types/domain';
 import Badge from '../components/Badge';
+import EmptyState from '../components/EmptyState';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Stock'>,
@@ -107,6 +109,7 @@ function DeviceCard({
 
 export default function StockScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  const { devices } = useShopData();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterTab>('All');
 
@@ -125,7 +128,7 @@ export default function StockScreen({ navigation }: Props) {
         device.model.toLowerCase().includes(q)
       );
     });
-  }, [query, filter]);
+  }, [devices, query, filter]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -158,15 +161,21 @@ export default function StockScreen({ navigation }: Props) {
       <Text style={styles.countText}>Showing {filtered.length} devices</Text>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {filtered.map(device => (
-          <DeviceCard
-            key={device.id}
-            device={device}
-            onPress={() =>
-              navigation.navigate('DeviceDetails', { deviceId: device.id })
-            }
+        {filtered.length === 0 ? (
+          <EmptyState
+            message={devices.length === 0 ? 'No devices found' : 'No devices match your search'}
           />
-        ))}
+        ) : (
+          filtered.map(device => (
+            <DeviceCard
+              key={device.id}
+              device={device}
+              onPress={() =>
+                navigation.navigate('DeviceDetails', { deviceId: device.id })
+              }
+            />
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );

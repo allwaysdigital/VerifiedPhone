@@ -7,27 +7,21 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { getBrands, type Brand } from '../data/brands';
+import { useShopData } from '../context/ShopDataContext';
 import BackButton from '../components/BackButton';
+import EmptyState from '../components/EmptyState';
 import PlusIcon from '../assets/icons/plus.svg';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Brands'>;
 
 export default function BrandsScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const [brandList, setBrandList] = useState<Brand[]>(getBrands());
-
-  useFocusEffect(
-    useCallback(() => {
-      setBrandList(getBrands());
-    }, []),
-  );
+  const { brands } = useShopData();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -44,13 +38,17 @@ export default function BrandsScreen({ navigation }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.card}>
-          {brandList.map(brand => (
-            <View key={brand.id} style={styles.brandRow}>
-              <Text style={styles.brandName}>{brand.name}</Text>
-            </View>
-          ))}
-        </View>
+        {brands.length === 0 ? (
+          <EmptyState message="No brands found" />
+        ) : (
+          <View style={styles.card}>
+            {brands.map(brand => (
+              <View key={brand.id} style={styles.brandRow}>
+                <Text style={styles.brandName}>{brand.name}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

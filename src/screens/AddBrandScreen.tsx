@@ -13,15 +13,18 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { addBrand, brandExists } from '../data/brands';
+import { useShopData } from '../context/ShopDataContext';
+import { ApiError } from '../api/client';
 import BackButton from '../components/BackButton';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddBrand'>;
 
 export default function AddBrandScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  const { brands, createBrand } = useShopData();
   const [brandName, setBrandName] = useState('');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleBrandNameChange = (value: string) => {
     setBrandName(value);
@@ -30,24 +33,31 @@ export default function AddBrandScreen({ navigation }: Props) {
     }
   };
 
-  const handleAddBrand = () => {
+  const handleAddBrand = async () => {
     const trimmed = brandName.trim();
     if (!trimmed) {
       return;
     }
 
-    if (brandExists(trimmed)) {
+    const exists = brands.some(b => b.name.toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
       setError('This brand is already added');
       return;
     }
 
-    const added = addBrand(trimmed);
-    if (!added) {
-      setError('This brand is already added');
-      return;
+    setSaving(true);
+    try {
+      await createBrand(trimmed);
+      navigation.goBack();
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 409
+          ? 'This brand is already added'
+          : 'Could not add brand. Please try again.',
+      );
+    } finally {
+      setSaving(false);
     }
-
-    navigation.goBack();
   };
 
   return (
@@ -72,10 +82,10 @@ export default function AddBrandScreen({ navigation }: Props) {
         </View>
 
         <TouchableOpacity
-          style={[styles.button, !brandName.trim() && styles.buttonDisabled]}
+          style={[styles.button, (!brandName.trim() || saving) && styles.buttonDisabled]}
           onPress={handleAddBrand}
-          disabled={!brandName.trim()}>
-          <Text style={styles.buttonText}>Add Brand</Text>
+          disabled={!brandName.trim() || saving}>
+          <Text style={styles.buttonText}>{saving ? 'Adding…' : 'Add Brand'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
