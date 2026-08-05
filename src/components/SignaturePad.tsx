@@ -35,6 +35,11 @@ export default React.forwardRef<SignaturePadHandle, Props>(function SignaturePad
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
+        // Capture-phase claims so a parent ScrollView can't steal move events
+        // after the initial touch-down on Android.
+        onStartShouldSetPanResponderCapture: () => true,
+        onMoveShouldSetPanResponderCapture: () => true,
+        onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: e => {
           const { locationX, locationY } = e.nativeEvent;
           currentPoints.current = `M${locationX.toFixed(1)},${locationY.toFixed(1)}`;
@@ -46,8 +51,12 @@ export default React.forwardRef<SignaturePadHandle, Props>(function SignaturePad
           setCurrentStroke(currentPoints.current);
         },
         onPanResponderRelease: () => {
-          if (currentPoints.current) {
-            setStrokes(prev => [...prev, currentPoints.current]);
+          // Capture the finished path before resetting currentPoints.current —
+          // the setStrokes updater below runs later (during React's commit),
+          // by which point the ref would already have been cleared to ''.
+          const finishedStroke = currentPoints.current;
+          if (finishedStroke) {
+            setStrokes(prev => [...prev, finishedStroke]);
             currentPoints.current = '';
             setCurrentStroke('');
             onChange?.(false);

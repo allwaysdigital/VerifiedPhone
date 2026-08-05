@@ -68,7 +68,7 @@ function QuickAction({ label, iconBg, icon, round, onPress }: QuickActionProps) 
   );
 }
 
-type BrandRow = { brand: string; units: string; value: string };
+type BrandRow = { brand: string; units: string; value: string; deviceIds: string[] };
 
 function todayLabel(): string {
   const d = new Date();
@@ -106,21 +106,31 @@ export default function DashboardScreen({ navigation }: Props) {
   }, [devices, today]);
 
   const brandDistribution = useMemo<BrandRow[]>(() => {
-    const byBrand = new Map<string, { units: number; value: number }>();
+    const byBrand = new Map<string, { units: number; value: number; deviceIds: string[] }>();
     devices.forEach(device => {
-      const entry = byBrand.get(device.brand) ?? { units: 0, value: 0 };
+      const entry = byBrand.get(device.brand) ?? { units: 0, value: 0, deviceIds: [] };
       entry.units += 1;
       entry.value += device.purchasePrice;
+      entry.deviceIds.push(device.id);
       byBrand.set(device.brand, entry);
     });
     return Array.from(byBrand.entries())
-      .map(([brand, { units, value }]) => ({
+      .map(([brand, { units, value, deviceIds }]) => ({
         brand,
         units: `${units} unit${units === 1 ? '' : 's'}`,
         value: formatLakhs(value),
+        deviceIds,
       }))
       .sort((a, b) => a.brand.localeCompare(b.brand));
   }, [devices]);
+
+  const handleBrandRowPress = (row: BrandRow) => {
+    if (row.deviceIds.length === 1) {
+      navigation.navigate('DeviceDetails', { deviceId: row.deviceIds[0] });
+    } else {
+      navigation.navigate('Stock', { searchQuery: row.brand });
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
@@ -195,19 +205,19 @@ export default function DashboardScreen({ navigation }: Props) {
         {brandDistribution.length === 0 ? (
           <EmptyState message="No stock yet" />
         ) : (
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('Brands')}>
-            <View style={styles.brandCard}>
-              {brandDistribution.map(row => (
-                <View key={row.brand} style={styles.brandRow}>
-                  <Text style={styles.brandName}>{row.brand}</Text>
-                  <Text style={styles.brandUnits}>{row.units}</Text>
-                  <Text style={styles.brandValue}>{row.value}</Text>
-                </View>
-              ))}
-            </View>
-          </TouchableOpacity>
+          <View style={styles.brandCard}>
+            {brandDistribution.map(row => (
+              <TouchableOpacity
+                key={row.brand}
+                activeOpacity={0.7}
+                style={styles.brandRow}
+                onPress={() => handleBrandRowPress(row)}>
+                <Text style={styles.brandName}>{row.brand}</Text>
+                <Text style={styles.brandUnits}>{row.units}</Text>
+                <Text style={styles.brandValue}>{row.value}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>

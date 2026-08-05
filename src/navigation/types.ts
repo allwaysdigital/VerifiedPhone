@@ -67,7 +67,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Dashboard: undefined;
-  Stock: undefined;
+  Stock: { searchQuery?: string } | undefined;
   AddPurchase: undefined;
   Reports: undefined;
   Settings: undefined;

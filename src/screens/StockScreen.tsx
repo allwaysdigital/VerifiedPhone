@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -107,11 +107,17 @@ function DeviceCard({
   );
 }
 
-export default function StockScreen({ navigation }: Props) {
+export default function StockScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const { devices } = useShopData();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterTab>('All');
+
+  useEffect(() => {
+    if (route.params?.searchQuery) {
+      setQuery(route.params.searchQuery);
+    }
+  }, [route.params?.searchQuery]);
 
   const filtered = useMemo(() => {
     return devices.filter(device => {
