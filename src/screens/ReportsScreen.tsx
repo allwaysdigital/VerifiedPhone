@@ -5,6 +5,7 @@ import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
 import { formatINR, formatLakhs } from '../utils/format';
+import { parseDMY } from '../utils/date';
 import type { Device } from '../types/domain';
 import BarChart, { ChartSeries } from '../components/BarChart';
 
@@ -54,17 +55,6 @@ const PERIOD_META: Record<
     formatValue: formatLakhs,
   },
 };
-
-function parseDMY(value?: string): Date | null {
-  if (!value) {
-    return null;
-  }
-  const [day, month, year] = value.split('/').map(Number);
-  if (!day || !month || !year) {
-    return null;
-  }
-  return new Date(year, month - 1, day);
-}
 
 function niceYAxis(maxValue: number): { yMax: number; yStep: number } {
   const safeMax = Math.max(maxValue, 4);

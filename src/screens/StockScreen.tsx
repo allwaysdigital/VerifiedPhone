@@ -8,21 +8,17 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { CompositeScreenProps } from '@react-navigation/native';
-import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList, RootStackParamList } from '../navigation/types';
+import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
 import type { Device } from '../types/domain';
 import Badge from '../components/Badge';
 import EmptyState from '../components/EmptyState';
+import BackButton from '../components/BackButton';
 
-type Props = CompositeScreenProps<
-  BottomTabScreenProps<MainTabParamList, 'Stock'>,
-  NativeStackScreenProps<RootStackParamList>
->;
+type Props = NativeStackScreenProps<RootStackParamList, 'Stock'>;
 
 type FilterTab = 'All' | 'Available' | 'Sold';
 const FILTER_TABS: FilterTab[] = ['All', 'Available', 'Sold'];
@@ -138,7 +134,10 @@ export default function StockScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.header}>Stock Management</Text>
+      <View style={styles.headerRow}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Text style={styles.headerTitle}>Stock Management</Text>
+      </View>
 
       <View style={styles.searchRow}>
         <SearchIcon />
@@ -192,12 +191,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
-  header: {
-    fontSize: 22,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
     fontWeight: '700',
-    textAlign: 'center',
-    marginTop: 12,
-    marginBottom: 16,
     color: colors.text,
   },
   searchRow: {

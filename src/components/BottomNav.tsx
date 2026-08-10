@@ -4,23 +4,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
 import NavDashboardIcon from '../assets/icons/nav_dashboard.svg';
-import NavStockIcon from '../assets/icons/nav_stock.svg';
-import NavAddIcon from '../assets/icons/nav_add.svg';
 import NavReportsIcon from '../assets/icons/nav_reports.svg';
 import NavSettingsIcon from '../assets/icons/nav_settings.svg';
 
 const ICONS: Record<string, typeof NavDashboardIcon> = {
   Dashboard: NavDashboardIcon,
-  Stock: NavStockIcon,
-  AddPurchase: NavAddIcon,
   Reports: NavReportsIcon,
   Settings: NavSettingsIcon,
 };
 
 const LABELS: Record<string, string> = {
   Dashboard: 'Dashboard',
-  Stock: 'Stock',
-  AddPurchase: 'Add',
   Reports: 'Reports',
   Settings: 'Settings',
 };

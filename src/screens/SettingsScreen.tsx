@@ -19,6 +19,7 @@ import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { logout } from '../auth/firebaseAuth';
 import { useShopData } from '../context/ShopDataContext';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
+import AddBrandPersonIcon from '../assets/icons/add_brand_person.svg';
 import { UploadField } from '../components/FormControls';
 import { GiftIcon, WarningIcon } from '../components/SubscriptionIcons';
 import {
@@ -136,6 +137,10 @@ export default function SettingsScreen({ navigation }: Props) {
     }
   };
 
+  const handleManageBrandsPress = () => {
+    navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('Brands');
+  };
+
   const handleSubscriptionPress = () => {
     const rootNavigation = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
     if (hasAccess) {
@@ -233,6 +238,17 @@ export default function SettingsScreen({ navigation }: Props) {
             <Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save Shop Details'}</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity style={styles.subscriptionCard} onPress={handleManageBrandsPress}>
+          <View style={[styles.subscriptionIconWrap, { backgroundColor: colors.pink }]}>
+            <AddBrandPersonIcon width={20} height={20} />
+          </View>
+          <View style={styles.subscriptionTextWrap}>
+            <Text style={styles.subscriptionTitle}>Manage Brands</Text>
+            <Text style={styles.subscriptionSubtitle}>Add or view the brands used in Add Purchase</Text>
+          </View>
+          <Text style={styles.subscriptionChevron}>›</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.subscriptionCard} onPress={handleSubscriptionPress}>
           <View

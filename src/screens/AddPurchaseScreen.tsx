@@ -7,10 +7,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { CompositeScreenProps } from '@react-navigation/native';
-import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList, RootStackParamList } from '../navigation/types';
+import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import {
@@ -33,11 +31,9 @@ import {
   isValidImei,
   isValidMobile,
 } from '../utils/validators';
+import BackButton from '../components/BackButton';
 
-type Props = CompositeScreenProps<
-  BottomTabScreenProps<MainTabParamList, 'AddPurchase'>,
-  NativeStackScreenProps<RootStackParamList>
->;
+type Props = NativeStackScreenProps<RootStackParamList, 'AddPurchase'>;
 
 const CONDITION_OPTIONS = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
 const ACCESSORY_OPTIONS = ['Charger', 'Box', 'Cable', 'Handsfree', 'Original Bill'];
@@ -174,7 +170,10 @@ export default function AddPurchaseScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.header}>Add Purchase</Text>
+      <View style={styles.headerRow}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Text style={styles.headerTitle}>Add Purchase</Text>
+      </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <FormSection title="Device Information">
           <FormSelect
@@ -410,12 +409,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
-  header: {
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 12,
-    marginBottom: 8,
     color: colors.text,
   },
   scrollContent: {

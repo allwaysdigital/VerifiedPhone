@@ -179,6 +179,38 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
         </View>
 
         {isSold ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Sale Information</Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Sale Price</Text>
+              <Text style={[styles.priceValue, { color: colors.greenDark }]}>
+                ₹{(device.salePrice ?? 0).toLocaleString('en-IN')}
+              </Text>
+            </View>
+            {device.saleDate ? (
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>Sale Date</Text>
+                <Text style={styles.sellerValue}>{device.saleDate}</Text>
+              </View>
+            ) : null}
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Buyer Name</Text>
+              <Text style={styles.sellerValue}>{device.buyerName || '—'}</Text>
+            </View>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Buyer Mobile</Text>
+              <Text style={styles.sellerValue}>{device.buyerMobile || '—'}</Text>
+            </View>
+            {device.warrantyPeriod ? (
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>Warranty</Text>
+                <Text style={styles.sellerValue}>{device.warrantyPeriod}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {isSold ? (
           <>
             <TouchableOpacity
               style={styles.outlineButton}

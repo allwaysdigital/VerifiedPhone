@@ -13,6 +13,9 @@ import DeviceDetailsScreen from '../screens/DeviceDetailsScreen';
 import BrandsScreen from '../screens/BrandsScreen';
 import AddBrandScreen from '../screens/AddBrandScreen';
 import AddSaleScreen from '../screens/AddSaleScreen';
+import StockScreen from '../screens/StockScreen';
+import AddPurchaseScreen from '../screens/AddPurchaseScreen';
+import TransactionListScreen from '../screens/TransactionListScreen';
 import InvoicePreviewScreen from '../screens/InvoicePreviewScreen';
 import PoliceExportRecordScreen from '../screens/PoliceExportRecordScreen';
 import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
@@ -39,6 +42,11 @@ export default function RootNavigator() {
         <Stack.Screen name="Brands" component={BrandsScreen} />
         <Stack.Screen name="AddBrand" component={AddBrandScreen} />
         <Stack.Screen name="AddSale" component={AddSaleScreen} />
+        <Stack.Screen name="Stock" component={StockScreen} />
+        <Stack.Screen name="AddPurchase" component={AddPurchaseScreen} />
+        <Stack.Screen name="PurchaseList" component={TransactionListScreen} />
+        <Stack.Screen name="SaleList" component={TransactionListScreen} />
+        <Stack.Screen name="ProfitList" component={TransactionListScreen} />
         <Stack.Screen name="InvoicePreview" component={InvoicePreviewScreen} />
         <Stack.Screen name="PoliceExportRecord" component={PoliceExportRecordScreen} />
         <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />

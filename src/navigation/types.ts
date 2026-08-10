@@ -50,6 +50,11 @@ export type RootStackParamList = {
   Brands: undefined;
   AddBrand: undefined;
   AddSale: { deviceId?: string } | undefined;
+  Stock: { searchQuery?: string } | undefined;
+  AddPurchase: undefined;
+  PurchaseList: undefined;
+  SaleList: undefined;
+  ProfitList: undefined;
   InvoicePreview: {
     deviceId: string;
     customerName: string;
@@ -67,8 +72,6 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Dashboard: undefined;
-  Stock: { searchQuery?: string } | undefined;
-  AddPurchase: undefined;
   Reports: undefined;
   Settings: undefined;
 };
