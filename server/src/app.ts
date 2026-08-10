@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import shopsRoutes from './routes/shops.routes';
 import devicesRoutes from './routes/devices.routes';
+import deviceRoutes from './routes/device.routes';
 import brandsRoutes from './routes/brands.routes';
 import subscriptionRoutes from './routes/subscription.routes';
 import { errorHandler } from './middleware/errorHandler';
@@ -18,6 +19,7 @@ export function createApp() {
 
   app.use('/api/shops', shopsRoutes);
   app.use('/api/devices', devicesRoutes);
+  app.use('/api/device', deviceRoutes);
   app.use('/api/brands', brandsRoutes);
   app.use('/api/subscription', subscriptionRoutes);
 

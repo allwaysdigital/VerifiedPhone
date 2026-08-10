@@ -8,6 +8,13 @@ import AddPurchaseScreen from '../../src/screens/AddPurchaseScreen';
 import { ShopDataContext } from '../../src/context/ShopDataContext';
 import { createMockShopDataContext } from '../../test-utils/mockShopData';
 import { createMockNavigation } from '../../test-utils/mockNavigation';
+import { lookupDeviceByImei } from '../../src/api/deviceLookup';
+
+jest.mock('../../src/api/deviceLookup', () => ({
+  lookupDeviceByImei: jest.fn(),
+}));
+
+const mockedLookup = lookupDeviceByImei as jest.MockedFunction<typeof lookupDeviceByImei>;
 
 async function pickImageFor(testID: string) {
   fireEvent.press(screen.getByTestId(testID));
@@ -29,6 +36,11 @@ function renderScreen() {
 }
 
 describe('AddPurchaseScreen', () => {
+  beforeEach(() => {
+    mockedLookup.mockReset();
+    mockedLookup.mockResolvedValue({ duplicate: false, found: false });
+  });
+
   test('shows every required/format error and does not navigate when submitted empty', () => {
     const { navigation } = renderScreen();
 
@@ -107,5 +119,104 @@ describe('AddPurchaseScreen', () => {
     await pickImageFor('upload-phone-front');
 
     expect(screen.getAllByText('This field is required')).toHaveLength(6);
+  });
+
+  test('blocks Save and shows an inline error when the IMEI is already in inventory', async () => {
+    mockedLookup.mockResolvedValueOnce({ duplicate: true });
+    const { navigation } = renderScreen();
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter 15-Digit IMEI'), '123456789012345');
+
+    await waitFor(() =>
+      expect(screen.getByText('This IMEI already exists in your inventory')).toBeTruthy(),
+    );
+
+    fireEvent.press(screen.getByText('Save'));
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  test('auto-fills and locks Brand/Model/RAM/Storage when the IMEI matches a known device', async () => {
+    mockedLookup.mockResolvedValueOnce({
+      duplicate: false,
+      found: true,
+      source: 'device-master',
+      device: { brand: 'Apple', model: 'iPhone 15', ram: '6GB', storage: '128GB' },
+    });
+    renderScreen();
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter 15-Digit IMEI'), '123456789012345');
+
+    await waitFor(() => expect(screen.getByText('Edit')).toBeTruthy());
+    expect(screen.getByText('Apple')).toBeTruthy();
+    expect(screen.getByDisplayValue('iPhone 15')).toBeTruthy();
+    expect(screen.getByDisplayValue('6GB')).toBeTruthy();
+    expect(screen.getByDisplayValue('128GB')).toBeTruthy();
+  });
+
+  test('"Edit" unlocks the auto-filled device fields for manual editing', async () => {
+    mockedLookup.mockResolvedValueOnce({
+      duplicate: false,
+      found: true,
+      source: 'device-master',
+      device: { brand: 'Apple', model: 'iPhone 15', ram: '6GB', storage: '128GB' },
+    });
+    renderScreen();
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter 15-Digit IMEI'), '123456789012345');
+    await waitFor(() => expect(screen.getByText('Edit')).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Edit'));
+    expect(screen.queryByText('Edit')).toBeNull();
+
+    fireEvent.changeText(screen.getByDisplayValue('iPhone 15'), 'iPhone 15 Pro');
+    expect(screen.getByDisplayValue('iPhone 15 Pro')).toBeTruthy();
+  });
+
+  test('"Verify IMEI Online" re-triggers a lookup for the same IMEI', async () => {
+    renderScreen();
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter 15-Digit IMEI'), '123456789012345');
+    await waitFor(() => expect(mockedLookup).toHaveBeenCalledTimes(1));
+
+    fireEvent.press(screen.getByText('Verify IMEI Online'));
+    await waitFor(() => expect(mockedLookup).toHaveBeenCalledTimes(2));
+  });
+
+  test('a provider timeout shows a timeout caption and does not block Save', async () => {
+    mockedLookup.mockResolvedValueOnce({ duplicate: false, found: false, errorType: 'timeout' });
+    renderScreen();
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter 15-Digit IMEI'), '123456789012345');
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Device lookup timed out — enter details manually below'),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByText('Edit')).toBeNull();
+  });
+
+  test('a quota-exceeded response shows a limit-reached caption', async () => {
+    mockedLookup.mockResolvedValueOnce({ duplicate: false, found: false, errorType: 'quota-exceeded' });
+    renderScreen();
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter 15-Digit IMEI'), '123456789012345');
+
+    await waitFor(() =>
+      expect(screen.getByText('Device lookup limit reached — enter details manually below')).toBeTruthy(),
+    );
+  });
+
+  test('an unavailable-service response shows an unavailable caption', async () => {
+    mockedLookup.mockResolvedValueOnce({ duplicate: false, found: false, errorType: 'unavailable' });
+    renderScreen();
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter 15-Digit IMEI'), '123456789012345');
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Device lookup service is unavailable right now — enter details manually below'),
+      ).toBeTruthy(),
+    );
   });
 });

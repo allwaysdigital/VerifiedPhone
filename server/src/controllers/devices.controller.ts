@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { Device } from '../models/Device';
+import { DeviceMaster } from '../models/DeviceMaster';
 import { fileToUrl } from '../upload/multerConfig';
 
 type ImageFields = {
@@ -76,6 +77,12 @@ export async function createDevice(req: Request, res: Response) {
   const body = req.body as Record<string, string>;
   const files = (req.files ?? {}) as ImageFields;
 
+  const duplicate = await Device.findOne({ shopId: req.shop!._id, imei1: body.imei1 });
+  if (duplicate) {
+    res.status(409).json({ error: 'A device with this IMEI already exists in your inventory' });
+    return;
+  }
+
   const purchasePrice = Number(body.purchasePrice) || 0;
   const expectedSalePrice = body.expectedSalePrice ? Number(body.expectedSalePrice) : null;
   const profit = expectedSalePrice !== null ? expectedSalePrice - purchasePrice : null;
@@ -119,6 +126,25 @@ export async function createDevice(req: Request, res: Response) {
     aadhaarFrontUrl: fileToUrl(req, files.aadhaarFront?.[0]),
     aadhaarBackUrl: fileToUrl(req, files.aadhaarBack?.[0]),
   });
+
+  // Best-effort: learn this brand/model for the TAC so future purchases of
+  // the same device auto-fill. Never let a cache-write hiccup fail an
+  // otherwise-successful purchase.
+  const tac = body.imei1?.slice(0, 8);
+  if (tac?.length === 8 && body.brand && body.model) {
+    try {
+      await DeviceMaster.updateOne(
+        { tac },
+        {
+          $setOnInsert: { source: 'manual' },
+          $set: { brand: body.brand, model: body.model, ram: body.ram ?? '', storage: body.storage ?? '' },
+        },
+        { upsert: true },
+      );
+    } catch (err) {
+      console.error('DeviceMaster upsert failed for tac', tac, err);
+    }
+  }
 
   res.status(201).json(serializeDevice(device));
 }

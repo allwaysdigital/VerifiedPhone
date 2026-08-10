@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -20,7 +20,9 @@ import {
   FormSelect,
   UploadField,
 } from '../components/FormControls';
+import ImeiScannerModal from '../components/ImeiScannerModal';
 import { useShopData } from '../context/ShopDataContext';
+import { lookupDeviceByImei } from '../api/deviceLookup';
 import {
   IMEI_MESSAGE,
   MOBILE_MESSAGE,
@@ -42,6 +44,29 @@ type Props = CompositeScreenProps<
 const CONDITION_OPTIONS = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
 const ACCESSORY_OPTIONS = ['Charger', 'Box', 'Cable', 'Handsfree', 'Original Bill'];
 
+type LookupStatus =
+  | 'idle'
+  | 'checking'
+  | 'duplicate'
+  | 'found'
+  | 'not-found'
+  | 'timeout'
+  | 'unavailable'
+  | 'quota-exceeded'
+  | 'invalid'
+  | 'auth-error'
+  | 'error';
+
+const LOOKUP_CAPTIONS: Partial<Record<LookupStatus, string>> = {
+  'not-found': "Couldn't identify this device automatically — enter details manually below",
+  timeout: 'Device lookup timed out — enter details manually below',
+  unavailable: 'Device lookup service is unavailable right now — enter details manually below',
+  'quota-exceeded': 'Device lookup limit reached — enter details manually below',
+  invalid: 'That IMEI failed validation — enter details manually below',
+  'auth-error': "Couldn't identify this device automatically — enter details manually below",
+  error: "Couldn't identify this device automatically — enter details manually below",
+};
+
 type FormErrors = {
   brand?: string;
   model?: string;
@@ -57,6 +82,8 @@ type FormErrors = {
   aadhaarFront?: string;
   aadhaarBack?: string;
 };
+
+const DUPLICATE_IMEI_MESSAGE = 'This IMEI already exists in your inventory';
 
 export default function AddPurchaseScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
@@ -85,6 +112,53 @@ export default function AddPurchaseScreen({ navigation }: Props) {
   const [aadhaarBack, setAadhaarBack] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
 
+  const [lookupStatus, setLookupStatus] = useState<LookupStatus>('idle');
+  const [deviceFieldsLocked, setDeviceFieldsLocked] = useState(false);
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const lastLookedUpImei = useRef('');
+
+  const runLookup = async (imei: string, opts?: { force?: boolean }) => {
+    if (!opts?.force && imei === lastLookedUpImei.current) {
+      return;
+    }
+    lastLookedUpImei.current = imei;
+    setLookupStatus('checking');
+    try {
+      const result = await lookupDeviceByImei(imei);
+      if (result.duplicate) {
+        setDeviceFieldsLocked(false);
+        setLookupStatus('duplicate');
+        setErrors(prev => ({ ...prev, imei1: DUPLICATE_IMEI_MESSAGE }));
+        return;
+      }
+      clearError('imei1');
+      if (result.found) {
+        setBrand(result.device.brand);
+        setModel(result.device.model);
+        setRam(result.device.ram);
+        setStorage(result.device.storage);
+        setDeviceFieldsLocked(true);
+        setLookupStatus('found');
+      } else {
+        setDeviceFieldsLocked(false);
+        setLookupStatus(result.errorType === 'invalid-imei' ? 'invalid' : result.errorType ?? 'not-found');
+      }
+    } catch {
+      setDeviceFieldsLocked(false);
+      setLookupStatus('error');
+    }
+  };
+
+  useEffect(() => {
+    if (isValidImei(imei1)) {
+      runLookup(imei1);
+    } else if (lookupStatus !== 'idle' || deviceFieldsLocked) {
+      setLookupStatus('idle');
+      setDeviceFieldsLocked(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imei1]);
+
   const toggleAccessory = (item: string) => {
     setAccessories(prev =>
       prev.includes(item) ? prev.filter(a => a !== item) : [...prev, item],
@@ -111,6 +185,8 @@ export default function AddPurchaseScreen({ navigation }: Props) {
     }
     if (!isValidImei(imei1)) {
       nextErrors.imei1 = IMEI_MESSAGE;
+    } else if (lookupStatus === 'duplicate') {
+      nextErrors.imei1 = DUPLICATE_IMEI_MESSAGE;
     }
     if (imei2.trim() && !isValidImei(imei2)) {
       nextErrors.imei2 = IMEI_MESSAGE;
@@ -176,70 +252,13 @@ export default function AddPurchaseScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.header}>Add Purchase</Text>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <FormSection title="Device Information">
-          <FormSelect
-            label="Brand"
-            required
-            placeholder="Select Brand"
-            options={brandOptions}
-            value={brand}
-            error={errors.brand}
-            onChange={value => {
-              setBrand(value);
-              clearError('brand');
-            }}
-          />
-          <FormInput
-            label="Model"
-            required
-            placeholder="Enter Model Name"
-            value={model}
-            error={errors.model}
-            onChangeText={text => {
-              setModel(text);
-              clearError('model');
-            }}
-          />
-          <View style={styles.row}>
-            <View style={styles.rowItem}>
-              <FormInput label="Color" placeholder="Color" value={color} onChangeText={setColor} />
-            </View>
-            <View style={styles.rowItem}>
-              <FormInput label="RAM" placeholder="e.g., 8GB" value={ram} onChangeText={setRam} />
-            </View>
-          </View>
-          <FormInput
-            label="Storage"
-            placeholder="e.g., 128GB"
-            value={storage}
-            onChangeText={setStorage}
-          />
-          <FormSelect
-            label="Condition"
-            required
-            placeholder="Select Condition"
-            options={CONDITION_OPTIONS}
-            value={condition}
-            error={errors.condition}
-            onChange={value => {
-              setCondition(value);
-              clearError('condition');
-            }}
-          />
-          <FormInput
-            label="Battery Health %"
-            placeholder="e.g., 85"
-            keyboardType="number-pad"
-            value={batteryHealth}
-            error={errors.batteryHealth}
-            onChangeText={text => {
-              setBatteryHealth(text.replace(/[^\d]/g, ''));
-              clearError('batteryHealth');
-            }}
-          />
-        </FormSection>
-
         <FormSection title="IMEI Information">
+          <View style={styles.scanRow}>
+            <Text style={styles.scanHint}>Scan the barcode or enter manually</Text>
+            <TouchableOpacity onPress={() => setScannerVisible(true)}>
+              <Text style={styles.scanLink}>Scan Barcode</Text>
+            </TouchableOpacity>
+          </View>
           <FormInput
             label="IMEI 1"
             required
@@ -265,9 +284,104 @@ export default function AddPurchaseScreen({ navigation }: Props) {
               clearError('imei2');
             }}
           />
-          <TouchableOpacity style={styles.verifyButton}>
-            <Text style={styles.verifyButtonText}>Verify IMEI Online</Text>
+          <TouchableOpacity
+            style={styles.verifyButton}
+            onPress={() => isValidImei(imei1) && runLookup(imei1, { force: true })}>
+            <Text style={styles.verifyButtonText}>
+              {lookupStatus === 'checking' ? 'Checking…' : 'Verify IMEI Online'}
+            </Text>
           </TouchableOpacity>
+          {lookupStatus === 'checking' ? (
+            <Text style={styles.lookupMutedText}>Looking up device information…</Text>
+          ) : null}
+          {lookupStatus === 'found' ? (
+            <Text style={styles.lookupFoundText}>
+              ✓ Device recognized — details auto-filled below
+            </Text>
+          ) : null}
+          {LOOKUP_CAPTIONS[lookupStatus] ? (
+            <Text style={styles.lookupMutedText}>{LOOKUP_CAPTIONS[lookupStatus]}</Text>
+          ) : null}
+        </FormSection>
+
+        <FormSection
+          title="Device Information"
+          headerRight={
+            deviceFieldsLocked ? (
+              <TouchableOpacity onPress={() => setDeviceFieldsLocked(false)}>
+                <Text style={styles.editLink}>Edit</Text>
+              </TouchableOpacity>
+            ) : null
+          }>
+          <FormSelect
+            label="Brand"
+            required
+            placeholder="Select Brand"
+            options={brandOptions}
+            value={brand}
+            error={errors.brand}
+            disabled={deviceFieldsLocked}
+            onChange={value => {
+              setBrand(value);
+              clearError('brand');
+            }}
+          />
+          <FormInput
+            label="Model"
+            required
+            placeholder="Enter Model Name"
+            value={model}
+            error={errors.model}
+            editable={!deviceFieldsLocked}
+            onChangeText={text => {
+              setModel(text);
+              clearError('model');
+            }}
+          />
+          <View style={styles.row}>
+            <View style={styles.rowItem}>
+              <FormInput label="Color" placeholder="Color" value={color} onChangeText={setColor} />
+            </View>
+            <View style={styles.rowItem}>
+              <FormInput
+                label="RAM"
+                placeholder="e.g., 8GB"
+                value={ram}
+                editable={!deviceFieldsLocked}
+                onChangeText={setRam}
+              />
+            </View>
+          </View>
+          <FormInput
+            label="Storage"
+            placeholder="e.g., 128GB"
+            value={storage}
+            editable={!deviceFieldsLocked}
+            onChangeText={setStorage}
+          />
+          <FormSelect
+            label="Condition"
+            required
+            placeholder="Select Condition"
+            options={CONDITION_OPTIONS}
+            value={condition}
+            error={errors.condition}
+            onChange={value => {
+              setCondition(value);
+              clearError('condition');
+            }}
+          />
+          <FormInput
+            label="Battery Health %"
+            placeholder="e.g., 85"
+            keyboardType="number-pad"
+            value={batteryHealth}
+            error={errors.batteryHealth}
+            onChangeText={text => {
+              setBatteryHealth(text.replace(/[^\d]/g, ''));
+              clearError('batteryHealth');
+            }}
+          />
         </FormSection>
 
         <FormSection title="Purchase Details">
@@ -401,6 +515,16 @@ export default function AddPurchaseScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <ImeiScannerModal
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+        onScanned={digits => {
+          setImei1(digits.slice(0, 15));
+          clearError('imei1');
+          setScannerVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -441,6 +565,27 @@ const styles = StyleSheet.create({
   accessoryItem: {
     width: '50%',
   },
+  scanRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  scanHint: {
+    fontSize: 13,
+    color: colors.textMuted,
+    flex: 1,
+  },
+  scanLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  editLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
   verifyButton: {
     backgroundColor: colors.primary,
     height: 48,
@@ -452,6 +597,18 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  lookupFoundText: {
+    fontSize: 13,
+    color: colors.greenDark,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  lookupMutedText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 10,
+    textAlign: 'center',
   },
   buttonRow: {
     flexDirection: 'row',

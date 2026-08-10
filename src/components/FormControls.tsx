@@ -16,14 +16,19 @@ import UploadIcon from '../assets/icons/upload_icon.svg';
 
 export function FormSection({
   title,
+  headerRight,
   children,
 }: {
   title: string;
+  headerRight?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {headerRight ?? null}
+      </View>
       {children}
     </View>
   );
@@ -62,6 +67,7 @@ type FormSelectProps = {
   options: string[];
   value: string | null;
   onChange: (value: string) => void;
+  disabled?: boolean;
 };
 
 export function FormSelect({
@@ -72,6 +78,7 @@ export function FormSelect({
   options,
   value,
   onChange,
+  disabled,
 }: FormSelectProps) {
   const [open, setOpen] = useState(false);
   return (
@@ -83,7 +90,12 @@ export function FormSelect({
         </Text>
       ) : null}
       <TouchableOpacity
-        style={[styles.selectInput, error ? styles.inputError : null]}
+        style={[
+          styles.selectInput,
+          error ? styles.inputError : null,
+          disabled ? styles.selectInputDisabled : null,
+        ]}
+        disabled={disabled}
         onPress={() => setOpen(true)}>
         <Text style={value ? styles.selectValue : styles.selectPlaceholder}>
           {value ?? placeholder}
@@ -237,11 +249,16 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 16,
   },
   field: {
     marginBottom: 16,
@@ -279,6 +296,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  selectInputDisabled: {
+    opacity: 0.6,
   },
   selectValue: {
     fontSize: 15,

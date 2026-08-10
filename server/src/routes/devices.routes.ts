@@ -4,6 +4,7 @@ import { resolveShop } from '../middleware/resolveShop';
 import { upload } from '../upload/multerConfig';
 import { asyncHandler } from '../utils/asyncHandler';
 import { createDevice, getDevice, listDevices, markDeviceSold } from '../controllers/devices.controller';
+import { lookupDevice } from '../controllers/deviceLookup.controller';
 
 const router = Router();
 
@@ -16,6 +17,9 @@ const purchaseImages = upload.fields([
 ]);
 
 router.get('/', requireAuth, asyncHandler(resolveShop), asyncHandler(listDevices));
+// Must be registered before GET /:id — otherwise /:id would swallow
+// /lookup/:imei1 since both match at the same path depth.
+router.get('/lookup/:imei1', requireAuth, asyncHandler(resolveShop), asyncHandler(lookupDevice));
 router.get('/:id', requireAuth, asyncHandler(resolveShop), asyncHandler(getDevice));
 router.post(
   '/',
