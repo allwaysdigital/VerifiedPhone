@@ -1,5 +1,17 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import {
+  FlatList,
+  Image,
+  Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
@@ -29,10 +41,45 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
+// One slide of the front/back photo carousel at the top of the screen.
+type CarouselImage = { key: string; label: string; uri: string };
+
+// Labeled thumbnail for a single uploaded document (bill, Aadhaar, etc).
+// Renders a muted "Not uploaded" placeholder instead of an empty box when
+// that particular image was never captured during purchase.
+function DocumentThumb({
+  label,
+  uri,
+  onPress,
+}: {
+  label: string;
+  uri?: string | null;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.docThumb}
+      disabled={!uri}
+      onPress={onPress}
+      activeOpacity={0.8}>
+      {uri ? (
+        <Image source={{ uri }} style={styles.docThumbImage} resizeMode="cover" />
+      ) : (
+        <Text style={styles.docThumbEmptyText}>Not uploaded</Text>
+      )}
+      <Text style={styles.docThumbLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function DeviceDetailsScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const { devices } = useShopData();
   const device = devices.find(d => d.id === route.params.deviceId);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const { width: windowWidth } = useWindowDimensions();
+  const carouselWidth = windowWidth - 32; // matches scrollContent's 16px horizontal padding
 
   if (!device) {
     return (
@@ -47,6 +94,20 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
   }
 
   const isSold = device.status === 'Sold';
+
+  // Only the images that were actually uploaded become slides — a device
+  // purchased with just a front photo gets a single, non-paging slide.
+  const carouselImages: CarouselImage[] = [
+    device.phoneFrontImageUrl ? { key: 'front', label: 'Front', uri: device.phoneFrontImageUrl } : null,
+    device.phoneBackImageUrl ? { key: 'back', label: 'Back', uri: device.phoneBackImageUrl } : null,
+  ].filter((item): item is CarouselImage => item !== null);
+
+  // pagingEnabled snaps scroll position to whole multiples of the slide
+  // width, so dividing back out gives us which slide is now active.
+  const handleCarouselScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / carouselWidth);
+    setCarouselIndex(index);
+  };
 
   const handleMarkAsSold = () => {
     navigation.navigate('AddSale', { deviceId: device.id });
@@ -74,10 +135,42 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.imagePlaceholder}>
-          <PhoneIcon />
-          <Text style={styles.imagePlaceholderText}>Device Image</Text>
-        </View>
+        {carouselImages.length > 0 ? (
+          <View>
+            <FlatList
+              data={carouselImages}
+              keyExtractor={item => item.key}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={handleCarouselScrollEnd}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  style={[styles.carouselItem, { width: carouselWidth }]}
+                  onPress={() => setPreviewUri(item.uri)}>
+                  <Image source={{ uri: item.uri }} style={styles.carouselImage} resizeMode="cover" />
+                  <Text style={styles.carouselLabel}>{item.label}</Text>
+                </TouchableOpacity>
+              )}
+            />
+            {carouselImages.length > 1 ? (
+              <View style={styles.dotsRow}>
+                {carouselImages.map((item, index) => (
+                  <View
+                    key={item.key}
+                    style={[styles.dot, index === carouselIndex && styles.dotActive]}
+                  />
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <PhoneIcon />
+            <Text style={styles.imagePlaceholderText}>Device Image</Text>
+          </View>
+        )}
 
         <View style={styles.card}>
           <View style={styles.cardTopRow}>
@@ -178,6 +271,27 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
           </View>
         </View>
 
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Documents</Text>
+          <View style={styles.docsGrid}>
+            <DocumentThumb
+              label="Old Bill"
+              uri={device.oldPhoneBillUrl}
+              onPress={() => setPreviewUri(device.oldPhoneBillUrl ?? null)}
+            />
+            <DocumentThumb
+              label="Aadhaar Front"
+              uri={device.aadhaarFrontUrl}
+              onPress={() => setPreviewUri(device.aadhaarFrontUrl ?? null)}
+            />
+            <DocumentThumb
+              label="Aadhaar Back"
+              uri={device.aadhaarBackUrl}
+              onPress={() => setPreviewUri(device.aadhaarBackUrl ?? null)}
+            />
+          </View>
+        </View>
+
         {isSold ? (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Sale Information</Text>
@@ -239,6 +353,23 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
           </>
         )}
       </ScrollView>
+
+      {/* Shared full-screen viewer — opened by tapping either a carousel
+          slide or a document thumbnail below. */}
+      <Modal
+        visible={!!previewUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewUri(null)}>
+        <TouchableOpacity
+          style={styles.previewBackdrop}
+          activeOpacity={1}
+          onPress={() => setPreviewUri(null)}>
+          {previewUri ? (
+            <Image source={{ uri: previewUri }} style={styles.previewImage} resizeMode="contain" />
+          ) : null}
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -437,5 +568,86 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,
+  },
+  carouselItem: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  carouselImage: {
+    width: '100%',
+    height: 260,
+  },
+  carouselLabel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.white,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingVertical: 6,
+    textAlign: 'center',
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+  },
+  dotActive: {
+    width: 18,
+    backgroundColor: colors.primary,
+  },
+  docsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  docThumb: {
+    width: '47%',
+    height: 110,
+    borderRadius: 10,
+    backgroundColor: colors.inputBg,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docThumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  docThumbLabel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.white,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingVertical: 4,
+    textAlign: 'center',
+  },
+  docThumbEmptyText: {
+    fontSize: 13,
+    color: colors.textFaint,
+  },
+  previewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: '80%',
   },
 });
