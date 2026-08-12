@@ -91,6 +91,22 @@ export async function createDevice(req: Request, res: Response) {
     }
   }
 
+  // Upload whichever of the 5 images were attached to S3 in parallel, then
+  // create the device once with real URLs already in hand.
+  const [
+    phoneFrontImageUrl,
+    phoneBackImageUrl,
+    oldPhoneBillUrl,
+    aadhaarFrontUrl,
+    aadhaarBackUrl,
+  ] = await Promise.all([
+    fileToUrl(req, files.phoneFrontImage?.[0]),
+    fileToUrl(req, files.phoneBackImage?.[0]),
+    fileToUrl(req, files.oldPhoneBill?.[0]),
+    fileToUrl(req, files.aadhaarFront?.[0]),
+    fileToUrl(req, files.aadhaarBack?.[0]),
+  ]);
+
   const device = await Device.create({
     shopId: req.shop!._id,
     brand: body.brand,
@@ -113,11 +129,11 @@ export async function createDevice(req: Request, res: Response) {
     sellerAddress: body.sellerAddress || null,
     sellerDeclarationConfirmed: body.sellerDeclarationConfirmed === 'true',
     sellerDeclarationConfirmedAt: body.sellerDeclarationConfirmed === 'true' ? new Date() : null,
-    phoneFrontImageUrl: fileToUrl(req, files.phoneFrontImage?.[0]),
-    phoneBackImageUrl: fileToUrl(req, files.phoneBackImage?.[0]),
-    oldPhoneBillUrl: fileToUrl(req, files.oldPhoneBill?.[0]),
-    aadhaarFrontUrl: fileToUrl(req, files.aadhaarFront?.[0]),
-    aadhaarBackUrl: fileToUrl(req, files.aadhaarBack?.[0]),
+    phoneFrontImageUrl,
+    phoneBackImageUrl,
+    oldPhoneBillUrl,
+    aadhaarFrontUrl,
+    aadhaarBackUrl,
   });
 
   res.status(201).json(serializeDevice(device));
