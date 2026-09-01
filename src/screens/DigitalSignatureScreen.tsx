@@ -52,7 +52,7 @@ export default function DigitalSignatureScreen({ navigation, route }: Props) {
         accessories: purchaseData.accessories,
         sellerName: purchaseData.fullName,
         sellerMobile: purchaseData.mobileNumber,
-        sellerAddress: purchaseData.address,
+        sellerAddress: '',
         sellerCity: purchaseData.city,
         sellerDeclarationConfirmed: true,
         phoneFrontImageUri: purchaseData.phoneFrontImage,

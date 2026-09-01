@@ -72,7 +72,6 @@ export default function AddPurchaseScreen({ navigation }: Props) {
   const [accessories, setAccessories] = useState<string[]>(['Charger']);
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
-  const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [phoneFrontImage, setPhoneFrontImage] = useState<string | null>(null);
   const [phoneBackImage, setPhoneBackImage] = useState<string | null>(null);
@@ -157,7 +156,6 @@ export default function AddPurchaseScreen({ navigation }: Props) {
         accessories,
         fullName,
         mobileNumber,
-        address,
         city,
         phoneFrontImage,
         phoneBackImage,
@@ -330,12 +328,6 @@ export default function AddPurchaseScreen({ navigation }: Props) {
               setMobileNumber(text.replace(/[^\d]/g, ''));
               clearError('mobileNumber');
             }}
-          />
-          <FormInput
-            label="Address"
-            placeholder="Enter complete address"
-            value={address}
-            onChangeText={setAddress}
           />
           <FormInput label="City" placeholder="City" value={city} onChangeText={setCity} />
         </FormSection>

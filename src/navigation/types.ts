@@ -24,7 +24,6 @@ export type PendingPurchaseData = {
   accessories: string[];
   fullName: string;
   mobileNumber: string;
-  address: string;
   city: string;
   phoneFrontImage: string | null;
   phoneBackImage: string | null;
