@@ -321,6 +321,18 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
                 <Text style={styles.sellerValue}>{device.warrantyPeriod}</Text>
               </View>
             ) : null}
+            <View style={styles.docsGrid}>
+              <DocumentThumb
+                label="Buyer Aadhaar Front"
+                uri={device.buyerAadhaarFrontUrl}
+                onPress={() => setPreviewUri(device.buyerAadhaarFrontUrl ?? null)}
+              />
+              <DocumentThumb
+                label="Buyer Aadhaar Back"
+                uri={device.buyerAadhaarBackUrl}
+                onPress={() => setPreviewUri(device.buyerAadhaarBackUrl ?? null)}
+              />
+            </View>
           </View>
         ) : null}
 

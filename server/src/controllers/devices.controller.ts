@@ -10,6 +10,11 @@ type ImageFields = {
   aadhaarBack?: Express.Multer.File[];
 };
 
+type SaleImageFields = {
+  buyerAadhaarFront?: Express.Multer.File[];
+  buyerAadhaarBack?: Express.Multer.File[];
+};
+
 function serializeDevice(device: InstanceType<typeof Device>) {
   return {
     id: device._id.toString(),
@@ -47,6 +52,8 @@ function serializeDevice(device: InstanceType<typeof Device>) {
     buyerName: device.buyerName,
     buyerMobile: device.buyerMobile,
     buyerAddress: device.buyerAddress,
+    buyerAadhaarFrontUrl: device.buyerAadhaarFrontUrl,
+    buyerAadhaarBackUrl: device.buyerAadhaarBackUrl,
     salePrice: device.salePrice,
     warrantyPeriod: device.warrantyPeriod,
     soldAt: device.soldAt,
@@ -154,9 +161,15 @@ export async function markDeviceSold(req: Request, res: Response) {
     buyerName: string;
     buyerMobile: string;
     buyerAddress?: string;
-    salePrice: number;
+    salePrice: string | number;
     warrantyPeriod?: string;
   };
+  const files = (req.files ?? {}) as SaleImageFields;
+
+  const [buyerAadhaarFrontUrl, buyerAadhaarBackUrl] = await Promise.all([
+    fileToUrl(req, files.buyerAadhaarFront?.[0]),
+    fileToUrl(req, files.buyerAadhaarBack?.[0]),
+  ]);
 
   const numericSalePrice = Number(salePrice) || 0;
   const profit = numericSalePrice - device.purchasePrice;
@@ -167,6 +180,15 @@ export async function markDeviceSold(req: Request, res: Response) {
   device.buyerName = buyerName;
   device.buyerMobile = buyerMobile;
   device.buyerAddress = buyerAddress ?? null;
+  // Only overwrite a document URL when a new file actually came in for this
+  // sale — keeps a re-save (if that's ever wired up) from wiping a
+  // previously uploaded Aadhaar image.
+  if (buyerAadhaarFrontUrl) {
+    device.buyerAadhaarFrontUrl = buyerAadhaarFrontUrl;
+  }
+  if (buyerAadhaarBackUrl) {
+    device.buyerAadhaarBackUrl = buyerAadhaarBackUrl;
+  }
   device.salePrice = numericSalePrice;
   device.warrantyPeriod = warrantyPeriod ?? null;
   device.profit = profit;

@@ -38,6 +38,8 @@ type RawDevice = {
   buyerName: string | null;
   buyerMobile: string | null;
   buyerAddress: string | null;
+  buyerAadhaarFrontUrl: string | null;
+  buyerAadhaarBackUrl: string | null;
   salePrice: number | null;
   warrantyPeriod: string | null;
   soldAt: string | null;
@@ -96,6 +98,8 @@ function toClientDevice(raw: RawDevice): Device {
     buyerName: raw.buyerName ?? undefined,
     buyerMobile: raw.buyerMobile ?? undefined,
     buyerAddress: raw.buyerAddress ?? undefined,
+    buyerAadhaarFrontUrl: resolveUrl(raw.buyerAadhaarFrontUrl),
+    buyerAadhaarBackUrl: resolveUrl(raw.buyerAadhaarBackUrl),
     salePrice: raw.salePrice ?? undefined,
     warrantyPeriod: raw.warrantyPeriod ?? undefined,
   };
@@ -169,11 +173,25 @@ export type MarkDeviceSoldInput = {
   buyerName: string;
   buyerMobile: string;
   buyerAddress: string;
+  buyerAadhaarFrontUri: string | null;
+  buyerAadhaarBackUri: string | null;
   salePrice: number;
   warrantyPeriod: string;
 };
 
 export async function markDeviceSold(id: string, input: MarkDeviceSoldInput): Promise<Device> {
-  const raw = await request<RawDevice>(`/api/devices/${id}`, { method: 'PATCH', body: input });
+  const raw = await requestForm<RawDevice>(
+    `/api/devices/${id}`,
+    {
+      buyerName: input.buyerName,
+      buyerMobile: input.buyerMobile,
+      buyerAddress: input.buyerAddress,
+      salePrice: input.salePrice,
+      warrantyPeriod: input.warrantyPeriod,
+      buyerAadhaarFront: imageFieldToFormFile(input.buyerAadhaarFrontUri),
+      buyerAadhaarBack: imageFieldToFormFile(input.buyerAadhaarBackUri),
+    },
+    { method: 'PATCH' },
+  );
   return toClientDevice(raw);
 }

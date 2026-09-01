@@ -38,6 +38,8 @@ export type Device = {
   buyerName?: string;
   buyerMobile?: string;
   buyerAddress?: string;
+  buyerAadhaarFrontUrl?: string | null;
+  buyerAadhaarBackUrl?: string | null;
   salePrice?: number;
   warrantyPeriod?: string;
 };

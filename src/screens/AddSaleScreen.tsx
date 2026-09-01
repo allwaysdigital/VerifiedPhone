@@ -6,7 +6,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { FormInput, FormSection, FormSelect } from '../components/FormControls';
+import { FormInput, FormSection, FormSelect, UploadField } from '../components/FormControls';
 import BackButton from '../components/BackButton';
 import { useShopData } from '../context/ShopDataContext';
 import type { Device } from '../types/domain';
@@ -47,6 +47,8 @@ export default function AddSaleScreen({ navigation, route }: Props) {
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [buyerAadhaarFront, setBuyerAadhaarFront] = useState<string | null>(null);
+  const [buyerAadhaarBack, setBuyerAadhaarBack] = useState<string | null>(null);
   const [salePrice, setSalePrice] = useState('');
   const [paymentMode, setPaymentMode] = useState<string | null>(null);
   const [warrantyPeriod, setWarrantyPeriod] = useState('');
@@ -74,6 +76,8 @@ export default function AddSaleScreen({ navigation, route }: Props) {
     selectedPhone: selectedDevice ? undefined : REQUIRED_MESSAGE,
     customerName: isRequired(customerName) ? undefined : REQUIRED_MESSAGE,
     customerMobile: isValidMobile(customerMobile) ? undefined : MOBILE_MESSAGE,
+    buyerAadhaarFront: buyerAadhaarFront ? undefined : REQUIRED_MESSAGE,
+    buyerAadhaarBack: buyerAadhaarBack ? undefined : REQUIRED_MESSAGE,
     salePrice: isPositiveNumber(salePrice) ? undefined : PRICE_MESSAGE,
     paymentMode: paymentMode ? undefined : REQUIRED_MESSAGE,
   };
@@ -92,6 +96,8 @@ export default function AddSaleScreen({ navigation, route }: Props) {
         buyerName: customerName,
         buyerMobile: customerMobile,
         buyerAddress: customerAddress,
+        buyerAadhaarFrontUri: buyerAadhaarFront,
+        buyerAadhaarBackUri: buyerAadhaarBack,
         salePrice: salePriceNum,
         warrantyPeriod,
       });
@@ -167,6 +173,22 @@ export default function AddSaleScreen({ navigation, route }: Props) {
             style={styles.addressInput}
             value={customerAddress}
             onChangeText={setCustomerAddress}
+          />
+          <UploadField
+            testID="upload-buyer-aadhaar-front"
+            label="Upload Aadhaar Front"
+            required
+            imageUri={buyerAadhaarFront}
+            error={showErrors ? errors.buyerAadhaarFront : undefined}
+            onImageSelected={setBuyerAadhaarFront}
+          />
+          <UploadField
+            testID="upload-buyer-aadhaar-back"
+            label="Upload Aadhaar Back"
+            required
+            imageUri={buyerAadhaarBack}
+            error={showErrors ? errors.buyerAadhaarBack : undefined}
+            onImageSelected={setBuyerAadhaarBack}
           />
         </FormSection>
 

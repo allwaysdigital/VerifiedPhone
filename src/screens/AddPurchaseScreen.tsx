@@ -105,7 +105,7 @@ export default function AddPurchaseScreen({ navigation }: Props) {
     if (batteryHealth.trim() && !isPercentage(batteryHealth)) {
       nextErrors.batteryHealth = PERCENTAGE_MESSAGE;
     }
-    if (!isValidImei(imei1)) {
+    if (imei1.trim() && !isValidImei(imei1)) {
       nextErrors.imei1 = IMEI_MESSAGE;
     }
     if (imei2.trim() && !isValidImei(imei2)) {
@@ -241,7 +241,6 @@ export default function AddPurchaseScreen({ navigation }: Props) {
         <FormSection title="IMEI Information">
           <FormInput
             label="IMEI 1"
-            required
             placeholder="Enter 15-Digit IMEI"
             keyboardType="number-pad"
             maxLength={15}

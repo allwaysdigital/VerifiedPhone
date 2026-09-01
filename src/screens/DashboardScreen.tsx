@@ -128,7 +128,7 @@ export default function DashboardScreen({ navigation }: Props) {
     if (row.deviceIds.length === 1) {
       navigation.navigate('DeviceDetails', { deviceId: row.deviceIds[0] });
     } else {
-      navigation.navigate('Stock', { searchQuery: row.brand });
+      navigation.navigate('StockList', { brand: row.brand });
     }
   };
 

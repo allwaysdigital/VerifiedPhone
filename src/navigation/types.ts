@@ -50,7 +50,16 @@ export type RootStackParamList = {
   Brands: undefined;
   AddBrand: undefined;
   AddSale: { deviceId?: string } | undefined;
-  Stock: { searchQuery?: string } | undefined;
+  Stock: undefined;
+  StockList: { brand?: string; searchQuery?: string } | undefined;
+  StockReportPreview: {
+    filter: 'All' | 'Available' | 'Sold';
+    query: string;
+    brand?: string;
+    datePreset?: 'All Time' | 'Today' | 'This Week' | 'This Month' | 'This Year' | 'Custom';
+    customStartIso?: string;
+    customEndIso?: string;
+  };
   AddPurchase: undefined;
   PurchaseList: undefined;
   SaleList: undefined;
