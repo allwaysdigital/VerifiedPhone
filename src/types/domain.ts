@@ -38,6 +38,7 @@ export type Device = {
   buyerName?: string;
   buyerMobile?: string;
   buyerAddress?: string;
+  buyerPhotoUrl?: string | null;
   buyerAadhaarFrontUrl?: string | null;
   buyerAadhaarBackUrl?: string | null;
   salePrice?: number;

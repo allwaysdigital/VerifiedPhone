@@ -38,6 +38,7 @@ type RawDevice = {
   buyerName: string | null;
   buyerMobile: string | null;
   buyerAddress: string | null;
+  buyerPhotoUrl: string | null;
   buyerAadhaarFrontUrl: string | null;
   buyerAadhaarBackUrl: string | null;
   salePrice: number | null;
@@ -98,6 +99,7 @@ function toClientDevice(raw: RawDevice): Device {
     buyerName: raw.buyerName ?? undefined,
     buyerMobile: raw.buyerMobile ?? undefined,
     buyerAddress: raw.buyerAddress ?? undefined,
+    buyerPhotoUrl: resolveUrl(raw.buyerPhotoUrl),
     buyerAadhaarFrontUrl: resolveUrl(raw.buyerAadhaarFrontUrl),
     buyerAadhaarBackUrl: resolveUrl(raw.buyerAadhaarBackUrl),
     salePrice: raw.salePrice ?? undefined,
@@ -173,6 +175,7 @@ export type MarkDeviceSoldInput = {
   buyerName: string;
   buyerMobile: string;
   buyerAddress: string;
+  buyerPhotoUri: string | null;
   buyerAadhaarFrontUri: string | null;
   buyerAadhaarBackUri: string | null;
   salePrice: number;
@@ -188,6 +191,7 @@ export async function markDeviceSold(id: string, input: MarkDeviceSoldInput): Pr
       buyerAddress: input.buyerAddress,
       salePrice: input.salePrice,
       warrantyPeriod: input.warrantyPeriod,
+      buyerPhoto: imageFieldToFormFile(input.buyerPhotoUri),
       buyerAadhaarFront: imageFieldToFormFile(input.buyerAadhaarFrontUri),
       buyerAadhaarBack: imageFieldToFormFile(input.buyerAadhaarBackUri),
     },

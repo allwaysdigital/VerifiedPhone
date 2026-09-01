@@ -343,6 +343,11 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
             ) : null}
             <View style={styles.docsGrid}>
               <DocumentThumb
+                label="Personal Photo"
+                uri={device.buyerPhotoUrl}
+                onPress={() => setPreviewUri(device.buyerPhotoUrl ?? null)}
+              />
+              <DocumentThumb
                 label="Buyer Aadhaar Front"
                 uri={device.buyerAadhaarFrontUrl}
                 onPress={() => setPreviewUri(device.buyerAadhaarFrontUrl ?? null)}

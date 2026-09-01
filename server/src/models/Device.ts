@@ -47,6 +47,7 @@ const deviceSchema = new Schema(
     buyerName: { type: String, default: null },
     buyerMobile: { type: String, default: null },
     buyerAddress: { type: String, default: null },
+    buyerPhotoUrl: { type: String, default: null },
     buyerAadhaarFrontUrl: { type: String, default: null },
     buyerAadhaarBackUrl: { type: String, default: null },
     salePrice: { type: Number, default: null },

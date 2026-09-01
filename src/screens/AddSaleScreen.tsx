@@ -49,6 +49,7 @@ export default function AddSaleScreen({ navigation, route }: Props) {
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [buyerPhoto, setBuyerPhoto] = useState<string | null>(null);
   const [buyerAadhaarFront, setBuyerAadhaarFront] = useState<string | null>(null);
   const [buyerAadhaarBack, setBuyerAadhaarBack] = useState<string | null>(null);
   const [salePrice, setSalePrice] = useState('');
@@ -98,6 +99,7 @@ export default function AddSaleScreen({ navigation, route }: Props) {
         buyerName: customerName,
         buyerMobile: customerMobile,
         buyerAddress: customerAddress,
+        buyerPhotoUri: buyerPhoto,
         buyerAadhaarFrontUri: buyerAadhaarFront,
         buyerAadhaarBackUri: buyerAadhaarBack,
         salePrice: salePriceNum,
@@ -175,6 +177,12 @@ export default function AddSaleScreen({ navigation, route }: Props) {
             style={styles.addressInput}
             value={customerAddress}
             onChangeText={setCustomerAddress}
+          />
+          <UploadField
+            testID="upload-buyer-photo"
+            label="Personal Photo"
+            imageUri={buyerPhoto}
+            onImageSelected={setBuyerPhoto}
           />
           <UploadField
             testID="upload-buyer-aadhaar-front"

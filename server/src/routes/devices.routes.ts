@@ -16,6 +16,7 @@ const purchaseImages = upload.fields([
 ]);
 
 const saleImages = upload.fields([
+  { name: 'buyerPhoto', maxCount: 1 },
   { name: 'buyerAadhaarFront', maxCount: 1 },
   { name: 'buyerAadhaarBack', maxCount: 1 },
 ]);
