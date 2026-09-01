@@ -47,6 +47,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   DigitalSignature: { purchaseData: PendingPurchaseData };
   DeviceDetails: { deviceId: string };
+  DeviceHistory: { imei1: string };
   Brands: undefined;
   AddBrand: undefined;
   AddSale: { deviceId?: string } | undefined;

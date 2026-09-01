@@ -95,6 +95,14 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
 
   const isSold = device.status === 'Sold';
 
+  // Every purchase of a phone (even a repeat buy after it was sold) gets
+  // its own Device row sharing the same IMEI — this counts how many rows
+  // that adds up to, so the history link only shows up once there's an
+  // actual story to tell.
+  const historyCount = device.imei1
+    ? devices.filter(d => d.imei1 === device.imei1).length
+    : 0;
+
   // Only the images that were actually uploaded become slides — a device
   // purchased with just a front photo gets a single, non-paging slide.
   const carouselImages: CarouselImage[] = [
@@ -231,6 +239,18 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
             </View>
           ) : null}
         </View>
+
+        {historyCount > 1 ? (
+          <TouchableOpacity
+            style={styles.historyButton}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('DeviceHistory', { imei1: device.imei1 })}>
+            <Text style={styles.historyButtonText}>
+              View Full Purchase &amp; Sale History ({historyCount})
+            </Text>
+            <Text style={styles.historyButtonArrow}>›</Text>
+          </TouchableOpacity>
+        ) : null}
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Pricing Information</Text>
@@ -455,6 +475,24 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 2,
+  },
+  historyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.inputBg,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  historyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  historyButtonArrow: {
+    fontSize: 20,
+    color: colors.primary,
   },
   cardTopRow: {
     flexDirection: 'row',

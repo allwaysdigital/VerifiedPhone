@@ -10,6 +10,7 @@ import RegisterScreen from '../screens/RegisterScreen';
 import MainTabs from './MainTabs';
 import DigitalSignatureScreen from '../screens/DigitalSignatureScreen';
 import DeviceDetailsScreen from '../screens/DeviceDetailsScreen';
+import DeviceHistoryScreen from '../screens/DeviceHistoryScreen';
 import BrandsScreen from '../screens/BrandsScreen';
 import AddBrandScreen from '../screens/AddBrandScreen';
 import AddSaleScreen from '../screens/AddSaleScreen';
@@ -41,6 +42,7 @@ export default function RootNavigator() {
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="DigitalSignature" component={DigitalSignatureScreen} />
         <Stack.Screen name="DeviceDetails" component={DeviceDetailsScreen} />
+        <Stack.Screen name="DeviceHistory" component={DeviceHistoryScreen} />
         <Stack.Screen name="Brands" component={BrandsScreen} />
         <Stack.Screen name="AddBrand" component={AddBrandScreen} />
         <Stack.Screen name="AddSale" component={AddSaleScreen} />
