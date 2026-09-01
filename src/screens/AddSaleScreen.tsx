@@ -6,6 +6,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
+import { useDisableBackNavigation } from '../hooks/useDisableBackNavigation';
 import { FormInput, FormSection, FormSelect, UploadField } from '../components/FormControls';
 import BackButton from '../components/BackButton';
 import { useShopData } from '../context/ShopDataContext';
@@ -38,6 +39,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
 
 export default function AddSaleScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  useDisableBackNavigation();
   const { devices, markDeviceSold } = useShopData();
   const availableDevices = devices.filter(d => d.status === 'Available');
   const [selectedPhone, setSelectedPhone] = useState<string | null>(() => {

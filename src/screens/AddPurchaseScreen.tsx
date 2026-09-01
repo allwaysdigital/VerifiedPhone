@@ -11,6 +11,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
+import { useDisableBackNavigation } from '../hooks/useDisableBackNavigation';
 import {
   FormCheckbox,
   FormInput,
@@ -56,6 +57,7 @@ type FormErrors = {
 
 export default function AddPurchaseScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  useDisableBackNavigation();
   const { brands } = useShopData();
   const brandOptions = brands.map(b => b.name);
   const [brand, setBrand] = useState<string | null>(null);
