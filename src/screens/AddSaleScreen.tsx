@@ -103,14 +103,9 @@ export default function AddSaleScreen({ navigation, route }: Props) {
         salePrice: salePriceNum,
         warrantyPeriod,
       });
-      navigation.navigate('InvoicePreview', {
-        deviceId: selectedDevice.id,
-        customerName,
-        customerMobile,
-        customerAddress,
-        salePrice: salePriceNum,
-        warrantyPeriod,
-      });
+      // Just save the sale and return to the Dashboard — the invoice isn't
+      // generated here anymore, it's produced on demand from Sale History.
+      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
     } catch (err) {
       setSubmitError('Could not complete this sale. Please try again.');
     } finally {
@@ -266,7 +261,7 @@ export default function AddSaleScreen({ navigation, route }: Props) {
           onPress={handleComplete}
           disabled={submitting}>
           <Text style={styles.completeButtonText}>
-            {submitting ? 'Completing…' : 'Complete Sale & Generate Invoice'}
+            {submitting ? 'Completing…' : 'Complete Sale'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>

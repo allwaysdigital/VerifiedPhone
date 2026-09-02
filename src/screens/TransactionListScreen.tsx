@@ -177,7 +177,18 @@ export default function TransactionListScreen({ navigation, route }: Props) {
                 <TransactionRow
                   mode={mode}
                   device={device}
-                  onPress={() => navigation.navigate('DeviceDetails', { deviceId: device.id })}
+                  onPress={() =>
+                    mode === 'sale'
+                      ? navigation.navigate('InvoicePreview', {
+                          deviceId: device.id,
+                          customerName: device.buyerName ?? '',
+                          customerMobile: device.buyerMobile ?? '',
+                          customerAddress: device.buyerAddress ?? '',
+                          salePrice: device.salePrice ?? device.expectedSalePrice,
+                          warrantyPeriod: device.warrantyPeriod ?? '',
+                        })
+                      : navigation.navigate('DeviceDetails', { deviceId: device.id })
+                  }
                 />
               </React.Fragment>
             ))}
