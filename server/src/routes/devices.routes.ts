@@ -15,6 +15,12 @@ const purchaseImages = upload.fields([
   { name: 'aadhaarBack', maxCount: 1 },
 ]);
 
+const saleImages = upload.fields([
+  { name: 'buyerPhoto', maxCount: 1 },
+  { name: 'buyerAadhaarFront', maxCount: 1 },
+  { name: 'buyerAadhaarBack', maxCount: 1 },
+]);
+
 router.get('/', requireAuth, asyncHandler(resolveShop), asyncHandler(listDevices));
 router.get('/:id', requireAuth, asyncHandler(resolveShop), asyncHandler(getDevice));
 router.post(
@@ -24,6 +30,12 @@ router.post(
   purchaseImages,
   asyncHandler(createDevice),
 );
-router.patch('/:id', requireAuth, asyncHandler(resolveShop), asyncHandler(markDeviceSold));
+router.patch(
+  '/:id',
+  requireAuth,
+  asyncHandler(resolveShop),
+  saleImages,
+  asyncHandler(markDeviceSold),
+);
 
 export default router;

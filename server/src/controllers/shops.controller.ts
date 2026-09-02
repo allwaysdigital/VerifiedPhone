@@ -27,7 +27,7 @@ export async function getMe(req: Request, res: Response) {
 
 export async function register(req: Request, res: Response) {
   const { shopName, gstNumber, address, contactNumber } = req.body as Record<string, string>;
-  const logoUrl = fileToUrl(req, req.file);
+  const logoUrl = await fileToUrl(req, req.file);
 
   const update: Record<string, unknown> = {
     shopName,
@@ -50,7 +50,7 @@ export async function register(req: Request, res: Response) {
 
 export async function updateMe(req: Request, res: Response) {
   const { shopName, gstNumber, address, contactNumber } = req.body as Record<string, string>;
-  const logoUrl = fileToUrl(req, req.file);
+  const logoUrl = await fileToUrl(req, req.file);
 
   const update: Record<string, unknown> = {};
   if (shopName !== undefined) update.shopName = shopName;

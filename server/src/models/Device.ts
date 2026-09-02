@@ -15,7 +15,10 @@ const deviceSchema = new Schema(
     batteryHealth: { type: Number, default: null },
     accessories: { type: [String], default: [] },
 
-    imei1: { type: String, required: true },
+    // IMEI is no longer mandatory at intake — some used/imported phones
+    // don't have it readily available, so the shop can leave it blank and
+    // fill it in later.
+    imei1: { type: String, default: '' },
     imei2: { type: String, default: null },
 
     purchasePrice: { type: Number, required: true },
@@ -44,6 +47,9 @@ const deviceSchema = new Schema(
     buyerName: { type: String, default: null },
     buyerMobile: { type: String, default: null },
     buyerAddress: { type: String, default: null },
+    buyerPhotoUrl: { type: String, default: null },
+    buyerAadhaarFrontUrl: { type: String, default: null },
+    buyerAadhaarBackUrl: { type: String, default: null },
     salePrice: { type: Number, default: null },
     warrantyPeriod: { type: String, default: null },
     soldAt: { type: Date, default: null },

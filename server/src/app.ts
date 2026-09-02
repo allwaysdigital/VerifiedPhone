@@ -1,4 +1,3 @@
-import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import shopsRoutes from './routes/shops.routes';
@@ -12,7 +11,9 @@ export function createApp() {
 
   app.use(cors());
   app.use(express.json());
-  app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+  // Uploaded images (device photos, shop logos) are stored in S3 and served
+  // directly from there — see server/src/upload/s3Client.ts. Nothing is
+  // written to local disk, since the app server's filesystem is ephemeral.
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
 

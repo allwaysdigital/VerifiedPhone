@@ -10,6 +10,12 @@ type ImageFields = {
   aadhaarBack?: Express.Multer.File[];
 };
 
+type SaleImageFields = {
+  buyerPhoto?: Express.Multer.File[];
+  buyerAadhaarFront?: Express.Multer.File[];
+  buyerAadhaarBack?: Express.Multer.File[];
+};
+
 function serializeDevice(device: InstanceType<typeof Device>) {
   return {
     id: device._id.toString(),
@@ -47,6 +53,9 @@ function serializeDevice(device: InstanceType<typeof Device>) {
     buyerName: device.buyerName,
     buyerMobile: device.buyerMobile,
     buyerAddress: device.buyerAddress,
+    buyerPhotoUrl: device.buyerPhotoUrl,
+    buyerAadhaarFrontUrl: device.buyerAadhaarFrontUrl,
+    buyerAadhaarBackUrl: device.buyerAadhaarBackUrl,
     salePrice: device.salePrice,
     warrantyPeriod: device.warrantyPeriod,
     soldAt: device.soldAt,
@@ -91,6 +100,22 @@ export async function createDevice(req: Request, res: Response) {
     }
   }
 
+  // Upload whichever of the 5 images were attached to S3 in parallel, then
+  // create the device once with real URLs already in hand.
+  const [
+    phoneFrontImageUrl,
+    phoneBackImageUrl,
+    oldPhoneBillUrl,
+    aadhaarFrontUrl,
+    aadhaarBackUrl,
+  ] = await Promise.all([
+    fileToUrl(req, files.phoneFrontImage?.[0]),
+    fileToUrl(req, files.phoneBackImage?.[0]),
+    fileToUrl(req, files.oldPhoneBill?.[0]),
+    fileToUrl(req, files.aadhaarFront?.[0]),
+    fileToUrl(req, files.aadhaarBack?.[0]),
+  ]);
+
   const device = await Device.create({
     shopId: req.shop!._id,
     brand: body.brand,
@@ -113,11 +138,11 @@ export async function createDevice(req: Request, res: Response) {
     sellerAddress: body.sellerAddress || null,
     sellerDeclarationConfirmed: body.sellerDeclarationConfirmed === 'true',
     sellerDeclarationConfirmedAt: body.sellerDeclarationConfirmed === 'true' ? new Date() : null,
-    phoneFrontImageUrl: fileToUrl(req, files.phoneFrontImage?.[0]),
-    phoneBackImageUrl: fileToUrl(req, files.phoneBackImage?.[0]),
-    oldPhoneBillUrl: fileToUrl(req, files.oldPhoneBill?.[0]),
-    aadhaarFrontUrl: fileToUrl(req, files.aadhaarFront?.[0]),
-    aadhaarBackUrl: fileToUrl(req, files.aadhaarBack?.[0]),
+    phoneFrontImageUrl,
+    phoneBackImageUrl,
+    oldPhoneBillUrl,
+    aadhaarFrontUrl,
+    aadhaarBackUrl,
   });
 
   res.status(201).json(serializeDevice(device));
@@ -138,9 +163,16 @@ export async function markDeviceSold(req: Request, res: Response) {
     buyerName: string;
     buyerMobile: string;
     buyerAddress?: string;
-    salePrice: number;
+    salePrice: string | number;
     warrantyPeriod?: string;
   };
+  const files = (req.files ?? {}) as SaleImageFields;
+
+  const [buyerPhotoUrl, buyerAadhaarFrontUrl, buyerAadhaarBackUrl] = await Promise.all([
+    fileToUrl(req, files.buyerPhoto?.[0]),
+    fileToUrl(req, files.buyerAadhaarFront?.[0]),
+    fileToUrl(req, files.buyerAadhaarBack?.[0]),
+  ]);
 
   const numericSalePrice = Number(salePrice) || 0;
   const profit = numericSalePrice - device.purchasePrice;
@@ -151,6 +183,18 @@ export async function markDeviceSold(req: Request, res: Response) {
   device.buyerName = buyerName;
   device.buyerMobile = buyerMobile;
   device.buyerAddress = buyerAddress ?? null;
+  // Only overwrite a document URL when a new file actually came in for this
+  // sale — keeps a re-save (if that's ever wired up) from wiping a
+  // previously uploaded Aadhaar image.
+  if (buyerPhotoUrl) {
+    device.buyerPhotoUrl = buyerPhotoUrl;
+  }
+  if (buyerAadhaarFrontUrl) {
+    device.buyerAadhaarFrontUrl = buyerAadhaarFrontUrl;
+  }
+  if (buyerAadhaarBackUrl) {
+    device.buyerAadhaarBackUrl = buyerAadhaarBackUrl;
+  }
   device.salePrice = numericSalePrice;
   device.warrantyPeriod = warrantyPeriod ?? null;
   device.profit = profit;
