@@ -18,6 +18,7 @@ import StockScreen from '../screens/StockScreen';
 import StockListScreen from '../screens/StockListScreen';
 import AddPurchaseScreen from '../screens/AddPurchaseScreen';
 import TransactionListScreen from '../screens/TransactionListScreen';
+import TransactionReportPreviewScreen from '../screens/TransactionReportPreviewScreen';
 import InvoicePreviewScreen from '../screens/InvoicePreviewScreen';
 import StockReportPreviewScreen from '../screens/StockReportPreviewScreen';
 import PoliceExportRecordScreen from '../screens/PoliceExportRecordScreen';
@@ -52,6 +53,7 @@ export default function RootNavigator() {
         <Stack.Screen name="PurchaseList" component={TransactionListScreen} />
         <Stack.Screen name="SaleList" component={TransactionListScreen} />
         <Stack.Screen name="ProfitList" component={TransactionListScreen} />
+        <Stack.Screen name="TransactionReportPreview" component={TransactionReportPreviewScreen} />
         <Stack.Screen name="InvoicePreview" component={InvoicePreviewScreen} />
         <Stack.Screen name="StockReportPreview" component={StockReportPreviewScreen} />
         <Stack.Screen name="PoliceExportRecord" component={PoliceExportRecordScreen} />

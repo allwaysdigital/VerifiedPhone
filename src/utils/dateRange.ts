@@ -51,11 +51,11 @@ export function getDateRange(
   }
 }
 
-// Devices are filtered by purchase date — the report is framed around
-// stock intake ("what came in during this period"), so purchaseDate is
-// the meaningful date whether or not a device has since been sold.
-export function isPurchaseDateInRange(
-  purchaseDate: string | undefined,
+// Generic "D/M/YYYY" date-in-range check — callers pick which date field
+// is meaningful for them (Stock Report uses purchaseDate; Sale/Profit
+// History use saleDate).
+export function isDateInRange(
+  dateStr: string | undefined,
   preset: DatePreset,
   custom?: CustomRange,
 ): boolean {
@@ -68,7 +68,7 @@ export function isPurchaseDateInRange(
     // anything out until the dealer actually picks both dates.
     return true;
   }
-  const parsed = parseDMY(purchaseDate);
+  const parsed = parseDMY(dateStr);
   if (!parsed) {
     return false;
   }

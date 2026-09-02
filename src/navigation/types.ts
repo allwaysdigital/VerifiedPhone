@@ -64,6 +64,13 @@ export type RootStackParamList = {
   PurchaseList: undefined;
   SaleList: undefined;
   ProfitList: undefined;
+  TransactionReportPreview: {
+    mode: 'purchase' | 'sale' | 'profit';
+    query: string;
+    datePreset?: 'All Time' | 'Today' | 'This Week' | 'This Month' | 'This Year' | 'Custom';
+    customStartIso?: string;
+    customEndIso?: string;
+  };
   InvoicePreview: {
     deviceId: string;
     customerName: string;

@@ -7,97 +7,35 @@ import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
 import { formatINR } from '../utils/format';
-import { parseDMY } from '../utils/date';
+import { isDateInRange } from '../utils/dateRange';
+import { useDateRangeFilter } from '../hooks/useDateRangeFilter';
+import DateRangeFilter from '../components/DateRangeFilter';
+import {
+  TRANSACTION_MODE_META,
+  matchesTransactionQuery,
+  selectTransactionDevices,
+  transactionDateField,
+  type TransactionMode,
+} from '../utils/transactions';
 import type { Device } from '../types/domain';
 import BackButton from '../components/BackButton';
 import EmptyState from '../components/EmptyState';
+import InvoiceIcon from '../assets/icons/invoice_icon.svg';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PurchaseList' | 'SaleList' | 'ProfitList'>;
 
-type Mode = 'purchase' | 'sale' | 'profit';
-
-const MODE_BY_ROUTE: Record<string, Mode> = {
+const MODE_BY_ROUTE: Record<string, TransactionMode> = {
   PurchaseList: 'purchase',
   SaleList: 'sale',
   ProfitList: 'profit',
 };
-
-const MODE_META: Record<
-  Mode,
-  {
-    title: string;
-    accent: string;
-    summaryLabel: string;
-    summaryValue: (devices: Device[]) => number;
-    summaryCaption: (count: number) => string;
-    emptyMessage: string;
-    searchPlaceholder: string;
-  }
-> = {
-  purchase: {
-    title: 'Purchase History',
-    accent: colors.purple,
-    summaryLabel: 'Total Purchases',
-    summaryValue: devices => devices.reduce((sum, d) => sum + d.purchasePrice, 0),
-    summaryCaption: count => `${count} device${count === 1 ? '' : 's'} purchased`,
-    emptyMessage: 'No purchases yet',
-    searchPlaceholder: 'Search by model, brand, IMEI, or seller',
-  },
-  sale: {
-    title: 'Sale History',
-    accent: colors.greenDark,
-    summaryLabel: 'Total Sales',
-    summaryValue: devices => devices.reduce((sum, d) => sum + (d.salePrice ?? 0), 0),
-    summaryCaption: count => `${count} device${count === 1 ? '' : 's'} sold`,
-    emptyMessage: 'No sales yet',
-    searchPlaceholder: 'Search by model, brand, IMEI, or buyer',
-  },
-  profit: {
-    title: 'Profit Overview',
-    accent: colors.green,
-    summaryLabel: 'Total Profit',
-    summaryValue: devices => devices.reduce((sum, d) => sum + d.profit, 0),
-    summaryCaption: count => `Across ${count} sold device${count === 1 ? '' : 's'}`,
-    emptyMessage: 'No profit recorded yet',
-    searchPlaceholder: 'Search by model, brand, or IMEI',
-  },
-};
-
-function timeValue(dateStr?: string): number {
-  return parseDMY(dateStr)?.getTime() ?? 0;
-}
-
-function selectDevices(mode: Mode, devices: Device[]): Device[] {
-  if (mode === 'purchase') {
-    return [...devices].sort((a, b) => timeValue(b.purchaseDate) - timeValue(a.purchaseDate));
-  }
-  const sold = devices.filter(d => d.status === 'Sold');
-  if (mode === 'sale') {
-    return sold.sort((a, b) => timeValue(b.saleDate) - timeValue(a.saleDate));
-  }
-  return sold.sort((a, b) => b.profit - a.profit);
-}
-
-function matchesQuery(device: Device, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) {
-    return true;
-  }
-  return (
-    device.imei1.includes(q) ||
-    device.brand.toLowerCase().includes(q) ||
-    device.model.toLowerCase().includes(q) ||
-    device.sellerName.toLowerCase().includes(q) ||
-    (device.buyerName ?? '').toLowerCase().includes(q)
-  );
-}
 
 function TransactionRow({
   mode,
   device,
   onPress,
 }: {
-  mode: Mode;
+  mode: TransactionMode;
   device: Device;
   onPress: () => void;
 }) {
@@ -137,12 +75,23 @@ export default function TransactionListScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const { devices } = useShopData();
   const [query, setQuery] = useState('');
+  // Defaults to "today's business" rather than the full history — the
+  // dealer can still widen it with the date chips below.
+  const dateFilter = useDateRangeFilter({ datePreset: 'Today' });
 
   const mode = MODE_BY_ROUTE[route.name];
-  const meta = MODE_META[mode];
+  const meta = TRANSACTION_MODE_META[mode];
 
-  const scoped = useMemo(() => selectDevices(mode, devices), [mode, devices]);
-  const filtered = useMemo(() => scoped.filter(d => matchesQuery(d, query)), [scoped, query]);
+  const scoped = useMemo(() => selectTransactionDevices(mode, devices), [mode, devices]);
+  const filtered = useMemo(
+    () =>
+      scoped
+        .filter(d => matchesTransactionQuery(d, query))
+        .filter(d =>
+          isDateInRange(transactionDateField(mode, d), dateFilter.datePreset, dateFilter.customRange),
+        ),
+    [scoped, query, mode, dateFilter.datePreset, dateFilter.customRange],
+  );
   const summaryTotal = useMemo(() => meta.summaryValue(scoped), [meta, scoped]);
 
   return (
@@ -150,12 +99,31 @@ export default function TransactionListScreen({ navigation, route }: Props) {
       <View style={styles.headerRow}>
         <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>{meta.title}</Text>
+        <TouchableOpacity
+          style={[styles.reportButton, { borderColor: meta.accent }]}
+          onPress={() =>
+            navigation.navigate('TransactionReportPreview', {
+              mode,
+              query,
+              datePreset: dateFilter.datePreset,
+              customStartIso: dateFilter.customRange.startIso ?? undefined,
+              customEndIso: dateFilter.customRange.endIso ?? undefined,
+            })
+          }>
+          <InvoiceIcon width={16} height={16} color={meta.accent} />
+          <Text style={[styles.reportButtonText, { color: meta.accent }]}>Report</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.summaryCard, { backgroundColor: meta.accent }]}>
         <Text style={styles.summaryLabel}>{meta.summaryLabel}</Text>
         <Text style={styles.summaryValue}>{formatINR(summaryTotal)}</Text>
         <Text style={styles.summaryCaption}>{meta.summaryCaption(scoped.length)}</Text>
+      </View>
+
+      <Text style={styles.dateRangeTitle}>Date Range</Text>
+      <View style={styles.dateRangeWrap}>
+        <DateRangeFilter state={dateFilter} />
       </View>
 
       <TextInput
@@ -213,14 +181,39 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: colors.text,
+  },
+  reportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  reportButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   summaryCard: {
     marginHorizontal: 16,
     borderRadius: 16,
     padding: 20,
+  },
+  dateRangeTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  dateRangeWrap: {
+    marginHorizontal: 16,
   },
   summaryLabel: {
     fontSize: 14,

@@ -187,15 +187,13 @@ export function buildStockReportHtml({
           </div>
 
           <h2>Summary</h2>
+          <!-- Stock report: devices that have already sold are excluded
+               above, so Available/Sold and Sale Value/Net Profit would
+               always read as "all" and "zero" here. Sale History and
+               Profit Overview cover that ground instead. -->
           <div class="stats">
-            <div class="stat"><div class="label">Total Devices</div><div class="value">${stats.totalDevices}</div></div>
-            <div class="stat"><div class="label">Available</div><div class="value" style="color:${colors.green}">${stats.availableCount}</div></div>
-            <div class="stat"><div class="label">Sold</div><div class="value" style="color:${colors.blue}">${stats.soldCount}</div></div>
-          </div>
-          <div class="stats">
-            <div class="stat"><div class="label">Total Purchase Value</div><div class="value">${formatINR(stats.totalPurchaseValue)}</div></div>
-            <div class="stat"><div class="label">Total Sale Value</div><div class="value" style="color:${colors.greenDark}">${formatINR(stats.totalSaleValue)}</div></div>
-            <div class="stat"><div class="label">Net Profit</div><div class="value" style="color:${colors.primary}">${formatINR(stats.netProfit)}</div></div>
+            <div class="stat"><div class="label">Devices In Stock</div><div class="value" style="color:${colors.green}">${stats.totalDevices}</div></div>
+            <div class="stat"><div class="label">Purchase Value</div><div class="value">${formatINR(stats.totalPurchaseValue)}</div></div>
           </div>
 
           <div class="divider"></div>
@@ -206,7 +204,7 @@ export function buildStockReportHtml({
               <tr>
                 <th>${brand ? 'Model' : 'Brand'}</th>
                 ${brand ? '<th>Specs</th>' : ''}
-                <th class="num">${brand ? 'Available / Sold' : 'Units'}</th>
+                <th class="num">Units</th>
                 <th class="num">Purchase Value</th>
               </tr>
             </thead>
@@ -219,7 +217,7 @@ export function buildStockReportHtml({
                 <tr>
                   <td>${row.model}</td>
                   <td>${[...row.storageOptions, ...row.ramOptions, ...row.conditions].join(', ')}</td>
-                  <td class="num">${row.availableCount} / ${row.soldCount}</td>
+                  <td class="num">${row.units}</td>
                   <td class="num">${formatINR(row.purchaseValue)}</td>
                 </tr>
               `,

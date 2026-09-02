@@ -16,7 +16,7 @@ import { formatINR } from '../utils/format';
 import {
   DATE_PRESETS,
   formatDateForDisplay,
-  isPurchaseDateInRange,
+  isDateInRange,
   type CustomRange,
   type DatePreset,
 } from '../utils/dateRange';
@@ -65,10 +65,15 @@ export default function StockReportPreviewScreen({ navigation, route }: Props) {
   // Date scope filters by purchase date — the report is framed around
   // stock intake ("what came in during this period"), so a device counts
   // toward a period based on when it was purchased, not when (or whether)
-  // it later sold.
+  // it later sold. This is a *stock* report — once a device sells it's no
+  // longer stock, so it's dropped here regardless of the incoming filter;
+  // sales/profit already have their own dedicated reports (Sale History,
+  // Profit Overview).
   const reportDevices = useMemo(() => {
     const base = filterDevices(devices, filter, query, brand);
-    return base.filter(device => isPurchaseDateInRange(device.purchaseDate, datePreset, customRange));
+    return base
+      .filter(device => device.status !== 'Sold')
+      .filter(device => isDateInRange(device.purchaseDate, datePreset, customRange));
   }, [devices, filter, query, brand, datePreset, customRange]);
   const stats = useMemo(() => computeStockReportStats(reportDevices), [reportDevices]);
   // Once scoped to a single brand, every brand row would just repeat that
@@ -84,9 +89,11 @@ export default function StockReportPreviewScreen({ navigation, route }: Props) {
       : datePreset;
 
   // The brand is already the headline of the card above, so the filter
-  // line only needs to add what that headline doesn't already say.
+  // line only needs to add what that headline doesn't already say. This
+  // report always excludes sold devices, so "Sold" isn't a meaningful
+  // value here even if that was the tab the dealer had open.
   const filterLabel = [
-    filter === 'All' ? 'All devices' : filter,
+    'In stock',
     query.trim() ? `matching "${query.trim()}"` : null,
     datePreset !== 'All Time' ? dateRangeLabel : null,
   ]
@@ -231,19 +238,13 @@ export default function StockReportPreviewScreen({ navigation, route }: Props) {
             </View>
 
             <Text style={styles.sectionTitle}>Summary</Text>
+            {/* This is a stock (inventory) report, not a sales one — sold
+                devices are excluded above, so Available/Sold and Sale
+                Value/Net Profit would always read as "all" and "zero".
+                Sale History and Profit Overview cover that ground instead. */}
             <View style={styles.statsRow}>
-              <StatBox label="Total Devices" value={String(stats.totalDevices)} />
-              <StatBox label="Available" value={String(stats.availableCount)} valueColor={colors.green} />
-              <StatBox label="Sold" value={String(stats.soldCount)} valueColor={colors.blue} />
-            </View>
-            <View style={styles.statsRow}>
+              <StatBox label="Devices In Stock" value={String(stats.totalDevices)} valueColor={colors.green} />
               <StatBox label="Purchase Value" value={formatINR(stats.totalPurchaseValue)} />
-              <StatBox
-                label="Sale Value"
-                value={formatINR(stats.totalSaleValue)}
-                valueColor={colors.greenDark}
-              />
-              <StatBox label="Net Profit" value={formatINR(stats.netProfit)} valueColor={colors.primary} />
             </View>
 
             <View style={styles.divider} />
@@ -255,7 +256,7 @@ export default function StockReportPreviewScreen({ navigation, route }: Props) {
               <View style={styles.table}>
                 <View style={styles.tableHeaderRow}>
                   <Text style={[styles.tableHeaderCell, styles.tableBrandCol]}>Model</Text>
-                  <Text style={[styles.tableHeaderCell, styles.tableNumCol]}>Avail/Sold</Text>
+                  <Text style={[styles.tableHeaderCell, styles.tableNumCol]}>Units</Text>
                   <Text style={[styles.tableHeaderCell, styles.tableValueCol]}>Purchase Value</Text>
                 </View>
                 {modelRows.map(row => {
@@ -268,11 +269,7 @@ export default function StockReportPreviewScreen({ navigation, route }: Props) {
                         <Text style={styles.tableCell}>{row.model}</Text>
                         {specs ? <Text style={styles.tableSubCell}>{specs}</Text> : null}
                       </View>
-                      <Text style={[styles.tableCell, styles.tableNumCol]}>
-                        <Text style={{ color: colors.green }}>{row.availableCount}</Text>
-                        {' / '}
-                        <Text style={{ color: colors.blue }}>{row.soldCount}</Text>
-                      </Text>
+                      <Text style={[styles.tableCell, styles.tableNumCol]}>{row.units}</Text>
                       <Text style={[styles.tableCell, styles.tableValueCol]}>
                         {formatINR(row.purchaseValue)}
                       </Text>
