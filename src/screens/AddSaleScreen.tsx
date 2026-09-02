@@ -79,8 +79,6 @@ export default function AddSaleScreen({ navigation, route }: Props) {
     selectedPhone: selectedDevice ? undefined : REQUIRED_MESSAGE,
     customerName: isRequired(customerName) ? undefined : REQUIRED_MESSAGE,
     customerMobile: isValidMobile(customerMobile) ? undefined : MOBILE_MESSAGE,
-    buyerAadhaarFront: buyerAadhaarFront ? undefined : REQUIRED_MESSAGE,
-    buyerAadhaarBack: buyerAadhaarBack ? undefined : REQUIRED_MESSAGE,
     salePrice: isPositiveNumber(salePrice) ? undefined : PRICE_MESSAGE,
     paymentMode: paymentMode ? undefined : REQUIRED_MESSAGE,
   };
@@ -187,17 +185,13 @@ export default function AddSaleScreen({ navigation, route }: Props) {
           <UploadField
             testID="upload-buyer-aadhaar-front"
             label="Upload Aadhaar Front"
-            required
             imageUri={buyerAadhaarFront}
-            error={showErrors ? errors.buyerAadhaarFront : undefined}
             onImageSelected={setBuyerAadhaarFront}
           />
           <UploadField
             testID="upload-buyer-aadhaar-back"
             label="Upload Aadhaar Back"
-            required
             imageUri={buyerAadhaarBack}
-            error={showErrors ? errors.buyerAadhaarBack : undefined}
             onImageSelected={setBuyerAadhaarBack}
           />
         </FormSection>
