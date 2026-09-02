@@ -108,9 +108,11 @@ function DeviceCard({
           />
           <Text style={styles.sellerName}>{device.sellerName}</Text>
         </View>
-        <Text style={styles.profitText}>
-          +₹{device.profit.toLocaleString('en-IN')} ({device.profitPercent}%)
-        </Text>
+        {device.status === 'Sold' ? (
+          <Text style={styles.profitText}>
+            +₹{device.profit.toLocaleString('en-IN')} ({device.profitPercent}%)
+          </Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );

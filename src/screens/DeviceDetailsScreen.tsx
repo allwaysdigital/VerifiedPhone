@@ -268,7 +268,9 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
           </View>
           <View style={styles.divider} />
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Expected Profit</Text>
+            {/* Once sold, this field holds the real purchase-vs-sale-price
+                profit, not the purchase-time estimate — label it as such. */}
+            <Text style={styles.priceLabel}>{isSold ? 'Actual Profit' : 'Expected Profit'}</Text>
             <Text style={styles.profitValue}>
               ₹{device.profit.toLocaleString('en-IN')} ({device.profitPercent}%)
             </Text>

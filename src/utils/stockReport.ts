@@ -107,7 +107,13 @@ export function computeStockReportStats(devices: Device[]): StockReportStats {
     totalSaleValue: devices
       .filter(d => d.status === 'Sold')
       .reduce((sum, d) => sum + (d.salePrice ?? 0), 0),
-    netProfit: devices.reduce((sum, d) => sum + d.profit, 0),
+    // Profit only exists once a device actually sells — before that,
+    // device.profit is just purchasePrice vs. the *expected* sale price
+    // entered at intake, not a real number. Counting it here would let
+    // unsold stock inflate a figure that's supposed to be realized profit.
+    netProfit: devices
+      .filter(d => d.status === 'Sold')
+      .reduce((sum, d) => sum + d.profit, 0),
     brandRows,
   };
 }
