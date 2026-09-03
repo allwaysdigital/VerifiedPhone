@@ -121,7 +121,9 @@ export default function BarChart({ categories, series, yMax, yStep }: Props) {
         {series.map(s => (
           <View key={s.name} style={styles.legendItem}>
             <View style={[styles.legendSwatch, { backgroundColor: s.color }]} />
-            <Text style={styles.legendLabel}>{s.name}</Text>
+            <Text allowFontScaling={false} style={styles.legendLabel}>
+              {s.name}{' '}
+            </Text>
           </View>
         ))}
       </View>
@@ -147,6 +149,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   legendLabel: {
+    flexShrink: 0,
+    // Some Android builds under-measure single-line text by a pixel or
+    // two, clipping the last glyph when the box is sized exactly to
+    // content — extra trailing slack plus a touch of letter-spacing
+    // keeps that from ever biting.
+    paddingRight: 6,
+    letterSpacing: 0.3,
     fontSize: 15,
     color: colors.text,
   },

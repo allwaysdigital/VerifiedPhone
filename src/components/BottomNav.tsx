@@ -13,10 +13,15 @@ const ICONS: Record<string, typeof NavDashboardIcon> = {
   Settings: NavSettingsIcon,
 };
 
+// Trailing space on each label works around an Android text-measurement
+// quirk (seen on real hardware, not the emulator) that clips the very
+// last glyph of a single-line Text sized exactly to its content — CSS
+// padding on the container didn't fix it, but padding baked into the
+// measured string itself does.
 const LABELS: Record<string, string> = {
-  Dashboard: 'Dashboard',
-  Reports: 'Reports',
-  Settings: 'Settings',
+  Dashboard: 'Dashboard ',
+  Reports: 'Reports ',
+  Settings: 'Settings ',
 };
 
 export default function BottomNav({ state, navigation }: BottomTabBarProps) {
@@ -43,7 +48,9 @@ export default function BottomNav({ state, navigation }: BottomTabBarProps) {
         return (
           <TouchableOpacity key={route.key} style={styles.navItem} onPress={onPress}>
             <Icon width={24} height={24} color={tint} />
-            <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
+            <Text
+              allowFontScaling={false}
+              style={[styles.navLabel, isActive && styles.navLabelActive]}>
               {LABELS[route.name]}
             </Text>
           </TouchableOpacity>
@@ -68,8 +75,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   navLabel: {
+    flexShrink: 0,
     fontSize: 12,
     color: colors.navInactive,
+    letterSpacing: 0.3,
+    paddingHorizontal: 6,
   },
   navLabelActive: {
     color: colors.primary,

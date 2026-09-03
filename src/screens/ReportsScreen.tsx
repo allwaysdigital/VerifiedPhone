@@ -1,6 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
@@ -8,6 +12,11 @@ import { formatINR, formatLakhs, profitLossLabel } from '../utils/format';
 import { parseDMY } from '../utils/date';
 import type { Device } from '../types/domain';
 import BarChart, { ChartSeries } from '../components/BarChart';
+
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'Reports'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
 
 type Period = 'Daily' | 'Monthly' | 'Yearly';
 const PERIODS: Period[] = ['Daily', 'Monthly', 'Yearly'];
@@ -148,7 +157,7 @@ function buildPeriodData(period: Period, devices: Device[]): PeriodData {
   };
 }
 
-export default function ReportsScreen() {
+export default function ReportsScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const { devices } = useShopData();
   const [period, setPeriod] = useState<Period>('Daily');
@@ -182,7 +191,10 @@ export default function ReportsScreen() {
         </View>
 
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('PurchaseList')}>
             <View style={styles.statCardHeader}>
               <Text style={styles.statLabel}>{data.purchaseLabel}</Text>
               {data.purchaseCaption ? (
@@ -195,8 +207,11 @@ export default function ReportsScreen() {
             {data.purchaseCaption ? (
               <Text style={styles.statCaption}>{data.purchaseCaption}</Text>
             ) : null}
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('SaleList')}>
             <View style={styles.statCardHeader}>
               <Text style={styles.statLabel}>{data.saleLabel}</Text>
               {data.saleCaption ? (
@@ -209,10 +224,13 @@ export default function ReportsScreen() {
             {data.saleCaption ? (
               <Text style={styles.statCaption}>{data.saleCaption}</Text>
             ) : null}
-          </View>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.netProfitCard}>
+        <TouchableOpacity
+          style={styles.netProfitCard}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('ProfitList')}>
           <View style={styles.netProfitHeader}>
             <Text style={styles.statLabel}>{data.netProfitLabel}</Text>
             <Text style={[styles.statIcon, { color: data.isNetLoss ? colors.danger : colors.greenDark }]}>
@@ -223,7 +241,7 @@ export default function ReportsScreen() {
             style={[styles.netProfitValue, data.isNetLoss ? { color: colors.danger } : null]}>
             {data.netProfit}
           </Text>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.chartCard}>
           <Text style={styles.chartTitle}>{data.chartTitle}</Text>
