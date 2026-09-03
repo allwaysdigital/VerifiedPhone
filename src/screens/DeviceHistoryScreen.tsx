@@ -6,7 +6,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
-import { formatINR } from '../utils/format';
+import { formatINR, profitLossLabel } from '../utils/format';
 import { parseDMY } from '../utils/date';
 import BackButton from '../components/BackButton';
 import type { Device } from '../types/domain';
@@ -69,8 +69,8 @@ export default function DeviceHistoryScreen({ navigation, route }: Props) {
                 <Text style={styles.summaryStatLabel}>Times Sold</Text>
               </View>
               <View style={styles.summaryStat}>
-                <Text style={styles.summaryStatValue}>{formatINR(totalProfit)}</Text>
-                <Text style={styles.summaryStatLabel}>Total Profit</Text>
+                <Text style={styles.summaryStatValue}>{formatINR(Math.abs(totalProfit))}</Text>
+                <Text style={styles.summaryStatLabel}>{profitLossLabel(totalProfit)}</Text>
               </View>
             </View>
           </View>
@@ -146,8 +146,8 @@ function TimelineEntry({
                   styles.entryProfit,
                   { color: cycle.profit >= 0 ? colors.greenDark : colors.danger },
                 ]}>
-                {cycle.profit >= 0 ? '+' : ''}
-                {formatINR(cycle.profit)}
+                {cycle.profit >= 0 ? '+' : '-'}
+                {formatINR(Math.abs(cycle.profit))}
               </Text>
             </View>
           </View>

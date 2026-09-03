@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
-import { formatINR, formatLakhs } from '../utils/format';
+import { formatINR, formatLakhs, profitLossLabel } from '../utils/format';
 import { parseDMY } from '../utils/date';
 import type { Device } from '../types/domain';
 import BarChart, { ChartSeries } from '../components/BarChart';
@@ -20,6 +20,8 @@ type PeriodData = {
   saleValue: string;
   saleCaption: string;
   netProfit: string;
+  netProfitLabel: string;
+  isNetLoss: boolean;
   chartTitle: string;
   categories: string[];
   yMax: number;
@@ -133,7 +135,9 @@ function buildPeriodData(period: Period, devices: Device[]): PeriodData {
     saleLabel: meta.saleLabel,
     saleValue: meta.formatValue(saleTotal),
     saleCaption: `${saleCount} device${saleCount === 1 ? '' : 's'}`,
-    netProfit: meta.formatValue(profitTotal),
+    netProfit: meta.formatValue(Math.abs(profitTotal)),
+    netProfitLabel: profitLossLabel(profitTotal, 'Net'),
+    isNetLoss: profitTotal < 0,
     chartTitle: meta.chartTitle,
     categories,
     yMax,
@@ -210,10 +214,15 @@ export default function ReportsScreen() {
 
         <View style={styles.netProfitCard}>
           <View style={styles.netProfitHeader}>
-            <Text style={styles.statLabel}>Net Profit</Text>
-            <Text style={[styles.statIcon, { color: colors.greenDark }]}>↗</Text>
+            <Text style={styles.statLabel}>{data.netProfitLabel}</Text>
+            <Text style={[styles.statIcon, { color: data.isNetLoss ? colors.danger : colors.greenDark }]}>
+              {data.isNetLoss ? '↘' : '↗'}
+            </Text>
           </View>
-          <Text style={styles.netProfitValue}>{data.netProfit}</Text>
+          <Text
+            style={[styles.netProfitValue, data.isNetLoss ? { color: colors.danger } : null]}>
+            {data.netProfit}
+          </Text>
         </View>
 
         <View style={styles.chartCard}>

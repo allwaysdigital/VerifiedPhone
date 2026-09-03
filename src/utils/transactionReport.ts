@@ -1,5 +1,5 @@
 import { colors } from '../theme/colors';
-import { formatINR } from './format';
+import { formatINR, profitLossLabel } from './format';
 import type { TransactionMode } from './transactions';
 import type { Device, Shop } from '../types/domain';
 
@@ -62,7 +62,7 @@ function rowHtml(mode: TransactionMode, device: Device): string {
       <td>${name}</td>
       <td>${device.saleDate || '—'}</td>
       <td class="num">${device.profitPercent}%</td>
-      <td class="num" style="color:${device.profit >= 0 ? colors.greenDark : colors.danger}">${formatINR(device.profit)}</td>
+      <td class="num" style="color:${device.profit >= 0 ? colors.greenDark : colors.danger}">${device.profit < 0 ? '-' : ''}${formatINR(Math.abs(device.profit))}</td>
     </tr>`;
 }
 
@@ -87,6 +87,11 @@ export function buildTransactionReportHtml({
   const meta = MODE_META[mode];
   const shopName = shop?.shopName || 'My Shop';
   const total = devices.reduce((sum, d) => sum + rowTotal(mode, d), 0);
+  // A dealer can sell below what they paid — relabel to "Total Loss" and
+  // tint the letterhead red rather than show a negative number next to a
+  // green "Total Profit".
+  const totalLabel = mode === 'profit' ? profitLossLabel(total) : meta.totalLabel;
+  const accent = mode === 'profit' && total < 0 ? colors.danger : meta.accent;
 
   return `
     <html>
@@ -94,7 +99,7 @@ export function buildTransactionReportHtml({
         <meta charset="utf-8" />
         <style>
           body { font-family: -apple-system, Roboto, Helvetica, Arial, sans-serif; color: #303030; padding: 0; margin: 0; }
-          .header { background: ${meta.accent}; color: #fff; text-align: center; padding: 26px 16px; }
+          .header { background: ${accent}; color: #fff; text-align: center; padding: 26px 16px; }
           .header h1 { margin: 0 0 6px; font-size: 22px; }
           .header p { margin: 2px 0; font-size: 12px; opacity: 0.9; }
           .body { padding: 20px; }
@@ -125,7 +130,7 @@ export function buildTransactionReportHtml({
           </div>
 
           <div class="stats">
-            <div class="stat"><div class="label">${meta.totalLabel}</div><div class="value" style="color:${meta.accent}">${formatINR(total)}</div></div>
+            <div class="stat"><div class="label">${totalLabel}</div><div class="value" style="color:${accent}">${formatINR(Math.abs(total))}</div></div>
             <div class="stat"><div class="label">Devices</div><div class="value">${devices.length}</div></div>
           </div>
 

@@ -9,7 +9,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
-import { formatLakhs } from '../utils/format';
+import { formatINR, formatLakhs } from '../utils/format';
 import EmptyState from '../components/EmptyState';
 import HeaderLogo from '../assets/icons/header_logo.svg';
 import StockBoxIcon from '../assets/icons/stock_box.svg';
@@ -178,10 +178,10 @@ export default function DashboardScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('SaleList')}
           />
           <StatCard
-            label="Today Profit"
-            value={`₹${stats.todayProfitTotal.toLocaleString('en-IN')}`}
-            valueColor={colors.greenDark}
-            iconBg={colors.greenDark}
+            label="Profit and Loss"
+            value={formatINR(Math.abs(stats.todayProfitTotal))}
+            valueColor={stats.todayProfitTotal < 0 ? colors.danger : colors.greenDark}
+            iconBg={stats.todayProfitTotal < 0 ? colors.danger : colors.greenDark}
             icon={<ProfitChartIcon width={32} height={32} />}
             onPress={() => navigation.navigate('ProfitList')}
           />

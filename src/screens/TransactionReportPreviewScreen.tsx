@@ -9,7 +9,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
-import { formatINR } from '../utils/format';
+import { formatINR, profitLossLabel } from '../utils/format';
 import { isDateInRange } from '../utils/dateRange';
 import { useDateRangeFilter } from '../hooks/useDateRangeFilter';
 import DateRangeFilter from '../components/DateRangeFilter';
@@ -45,7 +45,7 @@ function ReportRow({ mode, device }: { mode: Props['route']['params']['mode']; d
       : mode === 'sale'
       ? { text: formatINR(device.salePrice ?? 0), color: colors.greenDark }
       : {
-          text: `${device.profit >= 0 ? '+' : ''}${formatINR(device.profit)}`,
+          text: `${device.profit >= 0 ? '+' : '-'}${formatINR(Math.abs(device.profit))}`,
           color: device.profit >= 0 ? colors.greenDark : colors.danger,
         };
 
@@ -106,6 +106,11 @@ export default function TransactionReportPreviewScreen({ navigation, route }: Pr
   }, [devices, mode, query, dateFilter.datePreset, dateFilter.customRange]);
 
   const total = meta.summaryValue(reportDevices);
+  // A dealer can sell below what they paid — relabel to "Total Loss" and
+  // tint the whole report red rather than show a negative number next to
+  // a green "Total Profit".
+  const summaryLabel = mode === 'profit' ? profitLossLabel(total) : meta.summaryLabel;
+  const accentColor = mode === 'profit' && total < 0 ? colors.danger : meta.accent;
 
   const filterLabel = [
     dateFilter.datePreset !== 'All Time' ? dateFilter.dateRangeLabel : 'All Time',
@@ -161,9 +166,9 @@ export default function TransactionReportPreviewScreen({ navigation, route }: Pr
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.card}>
-          <View style={[styles.shopHeader, { backgroundColor: meta.accent }]}>
+          <View style={[styles.shopHeader, { backgroundColor: accentColor }]}>
             <View style={styles.shopIconWrap}>
-              <InvoiceIcon width={26} height={26} color={meta.accent} />
+              <InvoiceIcon width={26} height={26} color={accentColor} />
             </View>
             <Text style={styles.shopName}>{meta.title}</Text>
             <Text style={styles.shopMeta}>{shop?.shopName || 'My Shop'}</Text>
@@ -182,7 +187,7 @@ export default function TransactionReportPreviewScreen({ navigation, route }: Pr
 
             <Text style={styles.sectionTitle}>Summary</Text>
             <View style={styles.statsRow}>
-              <StatBox label={meta.summaryLabel} value={formatINR(total)} valueColor={meta.accent} />
+              <StatBox label={summaryLabel} value={formatINR(Math.abs(total))} valueColor={accentColor} />
               <StatBox label="Devices" value={String(reportDevices.length)} />
             </View>
 
@@ -206,7 +211,7 @@ export default function TransactionReportPreviewScreen({ navigation, route }: Pr
         <TouchableOpacity
           style={[
             styles.downloadButton,
-            { backgroundColor: meta.accent },
+            { backgroundColor: accentColor },
             isDownloading && styles.buttonDisabled,
           ]}
           onPress={handleDownloadPdf}

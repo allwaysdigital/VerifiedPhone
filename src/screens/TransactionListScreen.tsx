@@ -6,7 +6,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
-import { formatINR } from '../utils/format';
+import { formatINR, profitLossLabel } from '../utils/format';
 import { isDateInRange } from '../utils/dateRange';
 import { useDateRangeFilter } from '../hooks/useDateRangeFilter';
 import DateRangeFilter from '../components/DateRangeFilter';
@@ -45,7 +45,7 @@ function TransactionRow({
       : mode === 'sale'
       ? { text: formatINR(device.salePrice ?? 0), color: colors.greenDark }
       : {
-          text: `${device.profit >= 0 ? '+' : ''}${formatINR(device.profit)}`,
+          text: `${device.profit >= 0 ? '+' : '-'}${formatINR(Math.abs(device.profit))}`,
           color: device.profit >= 0 ? colors.greenDark : colors.danger,
         };
 
@@ -93,6 +93,11 @@ export default function TransactionListScreen({ navigation, route }: Props) {
     [scoped, query, mode, dateFilter.datePreset, dateFilter.customRange],
   );
   const summaryTotal = useMemo(() => meta.summaryValue(scoped), [meta, scoped]);
+  // A dealer can sell below what they paid — "Total Profit" reading
+  // negative would be confusing, so Profit Overview relabels itself
+  // "Total Loss" when the period nets out that way.
+  const summaryLabel = mode === 'profit' ? profitLossLabel(summaryTotal) : meta.summaryLabel;
+  const accentColor = mode === 'profit' && summaryTotal < 0 ? colors.danger : meta.accent;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -100,7 +105,7 @@ export default function TransactionListScreen({ navigation, route }: Props) {
         <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>{meta.title}</Text>
         <TouchableOpacity
-          style={[styles.reportButton, { borderColor: meta.accent }]}
+          style={[styles.reportButton, { borderColor: accentColor }]}
           onPress={() =>
             navigation.navigate('TransactionReportPreview', {
               mode,
@@ -110,14 +115,14 @@ export default function TransactionListScreen({ navigation, route }: Props) {
               customEndIso: dateFilter.customRange.endIso ?? undefined,
             })
           }>
-          <InvoiceIcon width={16} height={16} color={meta.accent} />
-          <Text style={[styles.reportButtonText, { color: meta.accent }]}>Report</Text>
+          <InvoiceIcon width={16} height={16} color={accentColor} />
+          <Text style={[styles.reportButtonText, { color: accentColor }]}>Report</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.summaryCard, { backgroundColor: meta.accent }]}>
-        <Text style={styles.summaryLabel}>{meta.summaryLabel}</Text>
-        <Text style={styles.summaryValue}>{formatINR(summaryTotal)}</Text>
+      <View style={[styles.summaryCard, { backgroundColor: accentColor }]}>
+        <Text style={styles.summaryLabel}>{summaryLabel}</Text>
+        <Text style={styles.summaryValue}>{formatINR(Math.abs(summaryTotal))}</Text>
         <Text style={styles.summaryCaption}>{meta.summaryCaption(scoped.length)}</Text>
       </View>
 
