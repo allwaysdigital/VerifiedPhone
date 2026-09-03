@@ -84,6 +84,7 @@ export type RootStackParamList = {
   PlanDetail: { planId: PlanId };
   TrialActivated: { planId: PlanId };
   ManageSubscription: undefined;
+  AppSupport: undefined;
 };
 
 export type MainTabParamList = {

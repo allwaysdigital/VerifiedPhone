@@ -26,6 +26,7 @@ import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
 import PlanDetailScreen from '../screens/PlanDetailScreen';
 import TrialActivatedScreen from '../screens/TrialActivatedScreen';
 import ManageSubscriptionScreen from '../screens/ManageSubscriptionScreen';
+import AppSupportScreen from '../screens/AppSupportScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -61,6 +62,7 @@ export default function RootNavigator() {
         <Stack.Screen name="PlanDetail" component={PlanDetailScreen} />
         <Stack.Screen name="TrialActivated" component={TrialActivatedScreen} />
         <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />
+        <Stack.Screen name="AppSupport" component={AppSupportScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
