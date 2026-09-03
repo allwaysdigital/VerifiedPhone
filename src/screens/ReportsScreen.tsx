@@ -302,13 +302,16 @@ const styles = StyleSheet.create({
   statCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 6,
   },
   statLabel: {
+    flex: 1,
     fontSize: 15,
     color: colors.textMuted,
   },
   statIcon: {
+    flexShrink: 0,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -333,7 +336,8 @@ const styles = StyleSheet.create({
   netProfitHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 6,
   },
   netProfitValue: {
     fontSize: 28,

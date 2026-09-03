@@ -25,7 +25,11 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AddSale'>;
 const PAYMENT_MODE_OPTIONS = ['Cash', 'UPI', 'Bank Transfer', 'Card'];
 
 function phoneLabel(device: Device): string {
-  return `${device.model} - ₹${device.expectedSalePrice.toLocaleString('en-IN')}`;
+  const purchase = device.purchasePrice.toLocaleString('en-IN');
+  const expected = device.expectedSalePrice.toLocaleString('en-IN');
+  // Purchase price alongside the expected sale price so the dealer can
+  // judge margin right from the picker, before even selecting a phone.
+  return `${device.model} - ₹${purchase} → ₹${expected}`;
 }
 
 function DetailField({ label, value }: { label: string; value: string }) {
