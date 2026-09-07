@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
@@ -86,7 +86,12 @@ function Illustration({ name }: { name: Slide['illustration'] }) {
 }
 
 export default function OnboardingScreen({ navigation }: Props) {
-  useScreenStatusBar('dark-content', colors.white);
+  // Android 15+ enforces edge-to-edge and silently ignores
+  // StatusBar.setBackgroundColor(), so the color here is only honored on
+  // older Android/iOS. The orange strip that actually paints the status
+  // bar area on newer Android comes from the insets.top spacer below.
+  useScreenStatusBar('light-content', colors.primary);
+  const insets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -111,48 +116,58 @@ export default function OnboardingScreen({ navigation }: Props) {
   const currentSlide = slides[activeIndex];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleScrollEnd}
-        style={styles.carousel}>
-        {slides.map(slide => (
-          <View key={slide.key} style={[styles.slide, { width: SCREEN_WIDTH }]}>
-            <Illustration name={slide.illustration} />
-          </View>
-        ))}
-      </ScrollView>
+    <View style={styles.root}>
+      <View style={[styles.statusBarSpacer, { height: insets.top }]} />
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleScrollEnd}
+          style={styles.carousel}>
+          {slides.map(slide => (
+            <View key={slide.key} style={[styles.slide, { width: SCREEN_WIDTH }]}>
+              <Illustration name={slide.illustration} />
+            </View>
+          ))}
+        </ScrollView>
 
-      <View style={styles.dotsRow}>
-        {slides.map((slide, index) => (
-          <View
-            key={slide.key}
-            style={[styles.dot, index === activeIndex && styles.dotActive]}
-          />
-        ))}
-      </View>
+        <View style={styles.dotsRow}>
+          {slides.map((slide, index) => (
+            <View
+              key={slide.key}
+              style={[styles.dot, index === activeIndex && styles.dotActive]}
+            />
+          ))}
+        </View>
 
-      <Text style={styles.title}>
-        {currentSlide.titleParts.map((part, i) => (
-          <Text
-            key={i}
-            style={part.highlight ? styles.titleHighlight : styles.titleDefault}>
-            {part.text}
-          </Text>
-        ))}
-      </Text>
+        <Text style={styles.title}>
+          {currentSlide.titleParts.map((part, i) => (
+            <Text
+              key={i}
+              style={part.highlight ? styles.titleHighlight : styles.titleDefault}>
+              {part.text}
+            </Text>
+          ))}
+        </Text>
 
-      <TouchableOpacity style={styles.button} onPress={handleButtonPress}>
-        <Text style={styles.buttonText}>{currentSlide.buttonLabel}</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+        <TouchableOpacity style={styles.button} onPress={handleButtonPress}>
+          <Text style={styles.buttonText}>{currentSlide.buttonLabel}</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+  statusBarSpacer: {
+    backgroundColor: colors.primary,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.white,

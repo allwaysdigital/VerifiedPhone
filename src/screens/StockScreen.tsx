@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
@@ -33,7 +33,11 @@ function BrandChip({ stat, onPress }: { stat: BrandStat; onPress: () => void }) 
 // currently available. Tapping a brand drills into StockList, which has
 // the actual searchable, filterable device list.
 export default function StockScreen({ navigation }: Props) {
+  // Android 15+ enforces edge-to-edge and silently ignores
+  // StatusBar.setBackgroundColor(), so the orange behind the status bar
+  // has to come from an actual painted spacer (below), not just this call.
   useScreenStatusBar('light-content', colors.primary);
+  const insets = useSafeAreaInsets();
   const { devices, brands } = useShopData();
 
   // "Stock" means what's currently available to sell, so both the header
@@ -71,7 +75,9 @@ export default function StockScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.root}>
+      <View style={[styles.statusBarSpacer, { height: insets.top }]} />
+      <SafeAreaView style={styles.container} edges={[]}>
       <View style={styles.headerHero}>
         <View style={styles.titleRow}>
           <BackButton onPress={() => navigation.goBack()} color={colors.white} />
@@ -134,11 +140,19 @@ export default function StockScreen({ navigation }: Props) {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.primary,
+  },
+  statusBarSpacer: {
+    backgroundColor: colors.primary,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.white,
