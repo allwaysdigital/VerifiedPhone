@@ -263,9 +263,11 @@ export default function AddPurchaseScreen({ navigation }: Props) {
               clearError('imei2');
             }}
           />
-          <TouchableOpacity style={styles.verifyButton}>
+          {/* Temporarily hidden per request — not wired to a real verification
+              service yet. Restore by uncommenting when that's ready. */}
+          {/* <TouchableOpacity style={styles.verifyButton}>
             <Text style={styles.verifyButtonText}>Verify IMEI Online</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </FormSection>
 
         <FormSection title="Purchase Details">
