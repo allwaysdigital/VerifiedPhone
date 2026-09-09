@@ -302,6 +302,11 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
               onPress={() => setPreviewUri(device.oldPhoneBillUrl ?? null)}
             />
             <DocumentThumb
+              label="Seller Photo"
+              uri={device.sellerPhotoUrl}
+              onPress={() => setPreviewUri(device.sellerPhotoUrl ?? null)}
+            />
+            <DocumentThumb
               label="Aadhaar Front"
               uri={device.aadhaarFrontUrl}
               onPress={() => setPreviewUri(device.aadhaarFrontUrl ?? null)}

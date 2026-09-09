@@ -58,6 +58,7 @@ export default function DigitalSignatureScreen({ navigation, route }: Props) {
         phoneFrontImageUri: purchaseData.phoneFrontImage,
         phoneBackImageUri: purchaseData.phoneBackImage,
         oldPhoneBillUri: purchaseData.oldPhoneBill,
+        sellerPhotoUri: purchaseData.sellerPhoto,
         aadhaarFrontUri: purchaseData.aadhaarFront,
         aadhaarBackUri: purchaseData.aadhaarBack,
       });

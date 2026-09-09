@@ -33,6 +33,7 @@ type RawDevice = {
   phoneFrontImageUrl: string | null;
   phoneBackImageUrl: string | null;
   oldPhoneBillUrl: string | null;
+  sellerPhotoUrl: string | null;
   aadhaarFrontUrl: string | null;
   aadhaarBackUrl: string | null;
   buyerName: string | null;
@@ -94,6 +95,7 @@ function toClientDevice(raw: RawDevice): Device {
     phoneFrontImageUrl: resolveUrl(raw.phoneFrontImageUrl),
     phoneBackImageUrl: resolveUrl(raw.phoneBackImageUrl),
     oldPhoneBillUrl: resolveUrl(raw.oldPhoneBillUrl),
+    sellerPhotoUrl: resolveUrl(raw.sellerPhotoUrl),
     aadhaarFrontUrl: resolveUrl(raw.aadhaarFrontUrl),
     aadhaarBackUrl: resolveUrl(raw.aadhaarBackUrl),
     buyerName: raw.buyerName ?? undefined,
@@ -139,6 +141,7 @@ export type DeviceCreateInput = {
   phoneFrontImageUri: string | null;
   phoneBackImageUri: string | null;
   oldPhoneBillUri: string | null;
+  sellerPhotoUri: string | null;
   aadhaarFrontUri: string | null;
   aadhaarBackUri: string | null;
 };
@@ -165,6 +168,7 @@ export async function createDevice(input: DeviceCreateInput): Promise<Device> {
     phoneFrontImage: imageFieldToFormFile(input.phoneFrontImageUri),
     phoneBackImage: imageFieldToFormFile(input.phoneBackImageUri),
     oldPhoneBill: imageFieldToFormFile(input.oldPhoneBillUri),
+    sellerPhoto: imageFieldToFormFile(input.sellerPhotoUri),
     aadhaarFront: imageFieldToFormFile(input.aadhaarFrontUri),
     aadhaarBack: imageFieldToFormFile(input.aadhaarBackUri),
   });

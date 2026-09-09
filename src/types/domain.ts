@@ -33,6 +33,7 @@ export type Device = {
   phoneFrontImageUrl?: string | null;
   phoneBackImageUrl?: string | null;
   oldPhoneBillUrl?: string | null;
+  sellerPhotoUrl?: string | null;
   aadhaarFrontUrl?: string | null;
   aadhaarBackUrl?: string | null;
   buyerName?: string;

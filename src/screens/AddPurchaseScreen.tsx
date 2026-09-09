@@ -75,6 +75,7 @@ export default function AddPurchaseScreen({ navigation }: Props) {
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [city, setCity] = useState('');
+  const [sellerPhoto, setSellerPhoto] = useState<string | null>(null);
   const [phoneFrontImage, setPhoneFrontImage] = useState<string | null>(null);
   const [phoneBackImage, setPhoneBackImage] = useState<string | null>(null);
   const [oldPhoneBill, setOldPhoneBill] = useState<string | null>(null);
@@ -159,6 +160,7 @@ export default function AddPurchaseScreen({ navigation }: Props) {
         fullName,
         mobileNumber,
         city,
+        sellerPhoto,
         phoneFrontImage,
         phoneBackImage,
         oldPhoneBill,
@@ -334,6 +336,12 @@ export default function AddPurchaseScreen({ navigation }: Props) {
             }}
           />
           <FormInput label="City" placeholder="City" value={city} onChangeText={setCity} />
+          <UploadField
+            testID="upload-seller-photo"
+            label="Personal Photo"
+            imageUri={sellerPhoto}
+            onImageSelected={setSellerPhoto}
+          />
         </FormSection>
 
         <FormSection title="Purchase Details">

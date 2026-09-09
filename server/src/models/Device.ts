@@ -41,6 +41,7 @@ const deviceSchema = new Schema(
     phoneFrontImageUrl: { type: String, default: null },
     phoneBackImageUrl: { type: String, default: null },
     oldPhoneBillUrl: { type: String, default: null },
+    sellerPhotoUrl: { type: String, default: null },
     aadhaarFrontUrl: { type: String, default: null },
     aadhaarBackUrl: { type: String, default: null },
 

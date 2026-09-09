@@ -28,6 +28,7 @@ export type PendingPurchaseData = {
   phoneFrontImage: string | null;
   phoneBackImage: string | null;
   oldPhoneBill: string | null;
+  sellerPhoto: string | null;
   aadhaarFront: string | null;
   aadhaarBack: string | null;
 };
