@@ -1,4 +1,3 @@
-import type { ConfirmationResult } from '@react-native-firebase/auth';
 import type { PlanId } from '../types/domain';
 
 export type PendingShopDetails = {
@@ -40,7 +39,7 @@ export type RootStackParamList = {
   OtpVerify: {
     dialCode: string;
     phoneNumber: string;
-    confirmation: ConfirmationResult;
+    sessionId: string;
     pendingShopDetails?: PendingShopDetails;
   };
   Register: undefined;

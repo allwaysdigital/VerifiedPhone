@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { subscribeToAuthState } from '../auth/firebaseAuth';
+import { subscribeToAuthState } from '../auth/session';
 import { createBrand as apiCreateBrand, listBrands } from '../api/brands';
 import {
   createDevice as apiCreateDevice,
@@ -75,8 +75,8 @@ export function ShopDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuthState(user => {
-      if (user) {
+    const unsubscribe = subscribeToAuthState(signedIn => {
+      if (signedIn) {
         fetchAll();
       } else {
         setShop(null);
