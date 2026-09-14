@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import authRoutes from './routes/auth.routes';
 import shopsRoutes from './routes/shops.routes';
 import devicesRoutes from './routes/devices.routes';
 import brandsRoutes from './routes/brands.routes';
@@ -17,6 +18,7 @@ export function createApp() {
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
+  app.use('/api/auth', authRoutes);
   app.use('/api/shops', shopsRoutes);
   app.use('/api/devices', devicesRoutes);
   app.use('/api/brands', brandsRoutes);
