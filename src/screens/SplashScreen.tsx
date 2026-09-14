@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { subscribeToAuthState } from '../auth/firebaseAuth';
+import { subscribeToAuthState } from '../auth/session';
 import SplashBg from '../assets/splash_bg.svg';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
@@ -16,13 +16,13 @@ export default function SplashScreen({ navigation }: Props) {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
 
-    const unsubscribe = subscribeToAuthState(user => {
+    const unsubscribe = subscribeToAuthState(signedIn => {
       unsubscribe();
       timer = setTimeout(() => {
         if (cancelled) {
           return;
         }
-        if (user) {
+        if (signedIn) {
           navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
         } else {
           navigation.replace('Onboarding');

@@ -14,7 +14,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { getAuthErrorMessage, sendOtp } from '../auth/firebaseAuth';
+import { getAuthErrorMessage, sendOtp, verifyOtp } from '../auth/session';
 import { useShopData } from '../context/ShopDataContext';
 import LogoMark from '../assets/logo_mark.svg';
 import { isValidOtp } from '../utils/validators';
@@ -26,7 +26,7 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const { registerShop } = useShopData();
   const { dialCode, phoneNumber, pendingShopDetails } = route.params;
-  const [confirmation, setConfirmation] = useState(route.params.confirmation);
+  const [sessionId, setSessionId] = useState(route.params.sessionId);
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -46,7 +46,7 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
     }
     setVerifying(true);
     try {
-      await confirmation.confirm(otp);
+      await verifyOtp(dialCode, phoneNumber, sessionId, otp);
       if (pendingShopDetails) {
         await registerShop({
           shopName: pendingShopDetails.shopName,
@@ -68,8 +68,8 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
     setResending(true);
     setError('');
     try {
-      const nextConfirmation = await sendOtp(dialCode, phoneNumber);
-      setConfirmation(nextConfirmation);
+      const nextSessionId = await sendOtp(dialCode, phoneNumber);
+      setSessionId(nextSessionId);
     } catch (err) {
       setError(getAuthErrorMessage(err, 'Could not resend OTP. Please try again.'));
     } finally {

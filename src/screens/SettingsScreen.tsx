@@ -16,7 +16,7 @@ import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { logout } from '../auth/firebaseAuth';
+import { logout } from '../auth/session';
 import { useShopData } from '../context/ShopDataContext';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
 import { UploadField } from '../components/FormControls';

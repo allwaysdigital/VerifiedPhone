@@ -18,7 +18,7 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import LogoMark from '../assets/logo_mark.svg';
 import { isValidMobile, MOBILE_MESSAGE } from '../utils/validators';
-import { getAuthErrorMessage, sendOtp } from '../auth/firebaseAuth';
+import { getAuthErrorMessage, sendOtp } from '../auth/session';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '../data/countryCodes';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
@@ -45,11 +45,11 @@ export default function LoginScreen({ navigation, route }: Props) {
     }
     setSending(true);
     try {
-      const confirmation = await sendOtp(dialCode, phoneNumber);
+      const sessionId = await sendOtp(dialCode, phoneNumber);
       navigation.navigate('OtpVerify', {
         dialCode,
         phoneNumber,
-        confirmation,
+        sessionId,
         pendingShopDetails: route.params?.pendingShopDetails,
       });
     } catch (err) {
