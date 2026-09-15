@@ -36,6 +36,10 @@ const shopSchema = new Schema(
     // resolveShop's lazy upsert creates a shop with defaults the moment any
     // authenticated call is made, before anyone has entered anything real.
     profileCompleted: { type: Boolean, default: false },
+    // Set directly in the database (not exposed through any API) for
+    // numbers that should skip 2Factor and log in with the fixed OTP
+    // 123456 — app store reviewers, QA devices, etc. See auth/otpBypass.ts.
+    otpBypass: { type: Boolean, default: false },
     subscription: { type: subscriptionSchema, default: () => ({}) },
   },
   { timestamps: true },
