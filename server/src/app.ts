@@ -5,6 +5,7 @@ import shopsRoutes from './routes/shops.routes';
 import devicesRoutes from './routes/devices.routes';
 import brandsRoutes from './routes/brands.routes';
 import subscriptionRoutes from './routes/subscription.routes';
+import otpBypassRoutes from './routes/otpBypass.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 export function createApp() {
@@ -23,6 +24,7 @@ export function createApp() {
   app.use('/api/devices', devicesRoutes);
   app.use('/api/brands', brandsRoutes);
   app.use('/api/subscription', subscriptionRoutes);
+  app.use('/api/admin/otp-bypass', otpBypassRoutes);
 
   app.use(errorHandler);
 

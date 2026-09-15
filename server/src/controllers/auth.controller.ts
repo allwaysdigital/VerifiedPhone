@@ -1,14 +1,27 @@
 import type { Request, Response } from 'express';
 import { Shop } from '../models/Shop';
 import { sendOtpViaTwoFactor, verifyOtpViaTwoFactor } from '../auth/twoFactor';
+import { BYPASS_OTP, isBypassNumber } from '../auth/otpBypass';
 import { signAppToken } from '../auth/appToken';
 
 const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
+
+// Bypassed numbers never talk to 2Factor at all, so there's no real session
+// id to hand back — this fixed, easily recognizable string stands in for one
+// and is checked for verbatim in verifyOtp below.
+function bypassSessionId(phoneNumber: string): string {
+  return `bypass:${phoneNumber}`;
+}
 
 export async function sendOtp(req: Request, res: Response) {
   const { phoneNumber } = req.body as { phoneNumber?: string };
   if (!phoneNumber || !E164_PATTERN.test(phoneNumber)) {
     res.status(400).json({ error: 'Enter a valid phone number.' });
+    return;
+  }
+
+  if (await isBypassNumber(phoneNumber)) {
+    res.json({ sessionId: bypassSessionId(phoneNumber) });
     return;
   }
 
@@ -34,13 +47,17 @@ export async function verifyOtp(req: Request, res: Response) {
   }
 
   let matched: boolean;
-  try {
-    matched = await verifyOtpViaTwoFactor(sessionId, otp);
-  } catch (err) {
-    res.status(502).json({
-      error: err instanceof Error ? err.message : 'Could not verify OTP. Please try again.',
-    });
-    return;
+  if (await isBypassNumber(phoneNumber)) {
+    matched = sessionId === bypassSessionId(phoneNumber) && otp === BYPASS_OTP;
+  } else {
+    try {
+      matched = await verifyOtpViaTwoFactor(sessionId, otp);
+    } catch (err) {
+      res.status(502).json({
+        error: err instanceof Error ? err.message : 'Could not verify OTP. Please try again.',
+      });
+      return;
+    }
   }
 
   if (!matched) {
