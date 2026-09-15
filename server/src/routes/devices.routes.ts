@@ -11,6 +11,7 @@ const purchaseImages = upload.fields([
   { name: 'phoneFrontImage', maxCount: 1 },
   { name: 'phoneBackImage', maxCount: 1 },
   { name: 'oldPhoneBill', maxCount: 1 },
+  { name: 'sellerPhoto', maxCount: 1 },
   { name: 'aadhaarFront', maxCount: 1 },
   { name: 'aadhaarBack', maxCount: 1 },
 ]);

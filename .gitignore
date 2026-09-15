@@ -86,3 +86,6 @@ server/node_modules/
 server/dist/
 server/.env
 server/uploads/
+
+# Generated release APKs (see scripts/build-release-apk.sh)
+/release-builds/

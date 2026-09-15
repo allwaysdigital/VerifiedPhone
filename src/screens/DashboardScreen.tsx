@@ -9,14 +9,13 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
-import { formatLakhs } from '../utils/format';
+import { formatINR, formatLakhs } from '../utils/format';
 import EmptyState from '../components/EmptyState';
 import HeaderLogo from '../assets/icons/header_logo.svg';
 import StockBoxIcon from '../assets/icons/stock_box.svg';
 import PurchaseCartIcon from '../assets/icons/purchase_cart.svg';
 import SaleDollarIcon from '../assets/icons/sale_dollar.svg';
 import ProfitChartIcon from '../assets/icons/profit_chart.svg';
-import AddBrandPersonIcon from '../assets/icons/add_brand_person.svg';
 import AddSaleDollarIcon from '../assets/icons/add_sale_dollar.svg';
 
 type Props = CompositeScreenProps<
@@ -31,16 +30,17 @@ type StatCardProps = {
   valueColor: string;
   iconBg: string;
   icon: React.ReactNode;
+  onPress?: () => void;
 };
 
-function StatCard({ label, value, caption, valueColor, iconBg, icon }: StatCardProps) {
+function StatCard({ label, value, caption, valueColor, iconBg, icon, onPress }: StatCardProps) {
   return (
-    <View style={styles.statCard}>
+    <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.statIconWrap, { backgroundColor: iconBg }]}>{icon}</View>
       <Text style={styles.statLabel}>{label}</Text>
       <Text style={[styles.statValue, { color: valueColor }]}>{value}</Text>
       {caption ? <Text style={styles.statCaption}>{caption}</Text> : null}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -128,7 +128,7 @@ export default function DashboardScreen({ navigation }: Props) {
     if (row.deviceIds.length === 1) {
       navigation.navigate('DeviceDetails', { deviceId: row.deviceIds[0] });
     } else {
-      navigation.navigate('Stock', { searchQuery: row.brand });
+      navigation.navigate('StockList', { brand: row.brand });
     }
   };
 
@@ -157,6 +157,7 @@ export default function DashboardScreen({ navigation }: Props) {
             valueColor={colors.primary}
             iconBg={colors.primary}
             icon={<StockBoxIcon width={32} height={32} />}
+            onPress={() => navigation.navigate('Stock')}
           />
           <StatCard
             label="Today Purchase"
@@ -165,6 +166,7 @@ export default function DashboardScreen({ navigation }: Props) {
             valueColor={colors.purple}
             iconBg={colors.purple}
             icon={<PurchaseCartIcon width={32} height={32} />}
+            onPress={() => navigation.navigate('PurchaseList')}
           />
           <StatCard
             label="Today Sale"
@@ -173,24 +175,26 @@ export default function DashboardScreen({ navigation }: Props) {
             valueColor={colors.green}
             iconBg={colors.green}
             icon={<SaleDollarIcon width={32} height={32} />}
+            onPress={() => navigation.navigate('SaleList')}
           />
           <StatCard
-            label="Today Profit"
-            value={`₹${stats.todayProfitTotal.toLocaleString('en-IN')}`}
-            valueColor={colors.greenDark}
-            iconBg={colors.greenDark}
+            label="Profit and Loss"
+            value={formatINR(Math.abs(stats.todayProfitTotal))}
+            valueColor={stats.todayProfitTotal < 0 ? colors.danger : colors.greenDark}
+            iconBg={stats.todayProfitTotal < 0 ? colors.danger : colors.greenDark}
             icon={<ProfitChartIcon width={32} height={32} />}
+            onPress={() => navigation.navigate('ProfitList')}
           />
         </View>
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.quickActionsRow}>
           <QuickAction
-            label="Add Brand"
-            iconBg={colors.pink}
-            icon={<AddBrandPersonIcon width={24} height={24} />}
+            label="Add Purchase"
+            iconBg={colors.purple}
+            icon={<PurchaseCartIcon width={24} height={24} />}
             round
-            onPress={() => navigation.navigate('Brands')}
+            onPress={() => navigation.navigate('AddPurchase')}
           />
           <QuickAction
             label="Add Sale"

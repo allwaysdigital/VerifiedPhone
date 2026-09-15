@@ -11,15 +11,23 @@ import CompleteProfileScreen from '../screens/CompleteProfileScreen';
 import MainTabs from './MainTabs';
 import DigitalSignatureScreen from '../screens/DigitalSignatureScreen';
 import DeviceDetailsScreen from '../screens/DeviceDetailsScreen';
+import DeviceHistoryScreen from '../screens/DeviceHistoryScreen';
 import BrandsScreen from '../screens/BrandsScreen';
 import AddBrandScreen from '../screens/AddBrandScreen';
 import AddSaleScreen from '../screens/AddSaleScreen';
+import StockScreen from '../screens/StockScreen';
+import StockListScreen from '../screens/StockListScreen';
+import AddPurchaseScreen from '../screens/AddPurchaseScreen';
+import TransactionListScreen from '../screens/TransactionListScreen';
+import TransactionReportPreviewScreen from '../screens/TransactionReportPreviewScreen';
 import InvoicePreviewScreen from '../screens/InvoicePreviewScreen';
+import StockReportPreviewScreen from '../screens/StockReportPreviewScreen';
 import PoliceExportRecordScreen from '../screens/PoliceExportRecordScreen';
 import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
 import PlanDetailScreen from '../screens/PlanDetailScreen';
 import TrialActivatedScreen from '../screens/TrialActivatedScreen';
 import ManageSubscriptionScreen from '../screens/ManageSubscriptionScreen';
+import AppSupportScreen from '../screens/AppSupportScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -38,15 +46,25 @@ export default function RootNavigator() {
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="DigitalSignature" component={DigitalSignatureScreen} />
         <Stack.Screen name="DeviceDetails" component={DeviceDetailsScreen} />
+        <Stack.Screen name="DeviceHistory" component={DeviceHistoryScreen} />
         <Stack.Screen name="Brands" component={BrandsScreen} />
         <Stack.Screen name="AddBrand" component={AddBrandScreen} />
         <Stack.Screen name="AddSale" component={AddSaleScreen} />
+        <Stack.Screen name="Stock" component={StockScreen} />
+        <Stack.Screen name="StockList" component={StockListScreen} />
+        <Stack.Screen name="AddPurchase" component={AddPurchaseScreen} />
+        <Stack.Screen name="PurchaseList" component={TransactionListScreen} />
+        <Stack.Screen name="SaleList" component={TransactionListScreen} />
+        <Stack.Screen name="ProfitList" component={TransactionListScreen} />
+        <Stack.Screen name="TransactionReportPreview" component={TransactionReportPreviewScreen} />
         <Stack.Screen name="InvoicePreview" component={InvoicePreviewScreen} />
+        <Stack.Screen name="StockReportPreview" component={StockReportPreviewScreen} />
         <Stack.Screen name="PoliceExportRecord" component={PoliceExportRecordScreen} />
         <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
         <Stack.Screen name="PlanDetail" component={PlanDetailScreen} />
         <Stack.Screen name="TrialActivated" component={TrialActivatedScreen} />
         <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />
+        <Stack.Screen name="AppSupport" component={AppSupportScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

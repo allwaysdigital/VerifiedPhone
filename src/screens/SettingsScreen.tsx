@@ -19,8 +19,10 @@ import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { logout } from '../auth/session';
 import { useShopData } from '../context/ShopDataContext';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
+import AddBrandPersonIcon from '../assets/icons/add_brand_person.svg';
 import { UploadField } from '../components/FormControls';
 import { GiftIcon, WarningIcon } from '../components/SubscriptionIcons';
+import { APP_BUILD, APP_VERSION } from '../constants/app';
 import {
   MOBILE_MESSAGE,
   REQUIRED_MESSAGE,
@@ -36,9 +38,6 @@ type FormErrors = {
   address?: string;
   contactNumber?: string;
 };
-
-const APP_VERSION = '1.0.0';
-const APP_BUILD = '2026.2.23';
 
 function LogoutIcon() {
   return (
@@ -64,6 +63,26 @@ function LogoutIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </Svg>
+  );
+}
+
+function SupportIcon() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z"
+        stroke={colors.white}
+        strokeWidth={2}
+      />
+      <Path
+        d="M9.5 9a2.5 2.5 0 0 1 4.86.833c0 1.667-2.36 1.667-2.36 3.334"
+        stroke={colors.white}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M12 17.5v.01" stroke={colors.white} strokeWidth={2.5} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -129,6 +148,14 @@ export default function SettingsScreen({ navigation }: Props) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleManageBrandsPress = () => {
+    navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('Brands');
+  };
+
+  const handleAppSupportPress = () => {
+    navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('AppSupport');
   };
 
   const handleSubscriptionPress = () => {
@@ -229,6 +256,17 @@ export default function SettingsScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity style={styles.subscriptionCard} onPress={handleManageBrandsPress}>
+          <View style={[styles.subscriptionIconWrap, { backgroundColor: colors.pink }]}>
+            <AddBrandPersonIcon width={20} height={20} />
+          </View>
+          <View style={styles.subscriptionTextWrap}>
+            <Text style={styles.subscriptionTitle}>Manage Brands</Text>
+            <Text style={styles.subscriptionSubtitle}>Add or view the brands used in Add Purchase</Text>
+          </View>
+          <Text style={styles.subscriptionChevron}>›</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.subscriptionCard} onPress={handleSubscriptionPress}>
           <View
             style={[
@@ -246,6 +284,17 @@ export default function SettingsScreen({ navigation }: Props) {
                 ? 'Subscription active'
                 : 'No active subscription'}
             </Text>
+          </View>
+          <Text style={styles.subscriptionChevron}>›</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.subscriptionCard} onPress={handleAppSupportPress}>
+          <View style={[styles.subscriptionIconWrap, { backgroundColor: colors.blue }]}>
+            <SupportIcon />
+          </View>
+          <View style={styles.subscriptionTextWrap}>
+            <Text style={styles.subscriptionTitle}>App Support</Text>
+            <Text style={styles.subscriptionSubtitle}>Help, FAQs & contact us</Text>
           </View>
           <Text style={styles.subscriptionChevron}>›</Text>
         </TouchableOpacity>

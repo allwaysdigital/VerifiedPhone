@@ -6,7 +6,8 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
-import { FormInput, FormSection, FormSelect } from '../components/FormControls';
+import { useDisableBackNavigation } from '../hooks/useDisableBackNavigation';
+import { FormInput, FormSection, FormSelect, UploadField } from '../components/FormControls';
 import BackButton from '../components/BackButton';
 import { useShopData } from '../context/ShopDataContext';
 import type { Device } from '../types/domain';
@@ -24,7 +25,11 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AddSale'>;
 const PAYMENT_MODE_OPTIONS = ['Cash', 'UPI', 'Bank Transfer', 'Card'];
 
 function phoneLabel(device: Device): string {
-  return `${device.model} - ₹${device.expectedSalePrice.toLocaleString('en-IN')}`;
+  const purchase = device.purchasePrice.toLocaleString('en-IN');
+  const expected = device.expectedSalePrice.toLocaleString('en-IN');
+  // Purchase price alongside the expected sale price so the dealer can
+  // judge margin right from the picker, before even selecting a phone.
+  return `${device.model} - ₹${purchase} → ₹${expected}`;
 }
 
 function DetailField({ label, value }: { label: string; value: string }) {
@@ -38,6 +43,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
 
 export default function AddSaleScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  useDisableBackNavigation();
   const { devices, markDeviceSold } = useShopData();
   const availableDevices = devices.filter(d => d.status === 'Available');
   const [selectedPhone, setSelectedPhone] = useState<string | null>(() => {
@@ -47,6 +53,9 @@ export default function AddSaleScreen({ navigation, route }: Props) {
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [buyerPhoto, setBuyerPhoto] = useState<string | null>(null);
+  const [buyerAadhaarFront, setBuyerAadhaarFront] = useState<string | null>(null);
+  const [buyerAadhaarBack, setBuyerAadhaarBack] = useState<string | null>(null);
   const [salePrice, setSalePrice] = useState('');
   const [paymentMode, setPaymentMode] = useState<string | null>(null);
   const [warrantyPeriod, setWarrantyPeriod] = useState('');
@@ -92,17 +101,15 @@ export default function AddSaleScreen({ navigation, route }: Props) {
         buyerName: customerName,
         buyerMobile: customerMobile,
         buyerAddress: customerAddress,
+        buyerPhotoUri: buyerPhoto,
+        buyerAadhaarFrontUri: buyerAadhaarFront,
+        buyerAadhaarBackUri: buyerAadhaarBack,
         salePrice: salePriceNum,
         warrantyPeriod,
       });
-      navigation.navigate('InvoicePreview', {
-        deviceId: selectedDevice.id,
-        customerName,
-        customerMobile,
-        customerAddress,
-        salePrice: salePriceNum,
-        warrantyPeriod,
-      });
+      // Just save the sale and return to the Dashboard — the invoice isn't
+      // generated here anymore, it's produced on demand from Sale History.
+      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
     } catch (err) {
       setSubmitError('Could not complete this sale. Please try again.');
     } finally {
@@ -167,6 +174,24 @@ export default function AddSaleScreen({ navigation, route }: Props) {
             style={styles.addressInput}
             value={customerAddress}
             onChangeText={setCustomerAddress}
+          />
+          <UploadField
+            testID="upload-buyer-photo"
+            label="Personal Photo"
+            imageUri={buyerPhoto}
+            onImageSelected={setBuyerPhoto}
+          />
+          <UploadField
+            testID="upload-buyer-aadhaar-front"
+            label="Upload Aadhaar Front"
+            imageUri={buyerAadhaarFront}
+            onImageSelected={setBuyerAadhaarFront}
+          />
+          <UploadField
+            testID="upload-buyer-aadhaar-back"
+            label="Upload Aadhaar Back"
+            imageUri={buyerAadhaarBack}
+            onImageSelected={setBuyerAadhaarBack}
           />
         </FormSection>
 
@@ -240,7 +265,7 @@ export default function AddSaleScreen({ navigation, route }: Props) {
           onPress={handleComplete}
           disabled={submitting}>
           <Text style={styles.completeButtonText}>
-            {submitting ? 'Completing…' : 'Complete Sale & Generate Invoice'}
+            {submitting ? 'Completing…' : 'Complete Sale'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
