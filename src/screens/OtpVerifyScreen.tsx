@@ -46,8 +46,10 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
     }
     setVerifying(true);
     try {
-      await verifyOtp(dialCode, phoneNumber, sessionId, otp);
+      const { profileCompleted } = await verifyOtp(dialCode, phoneNumber, sessionId, otp);
       if (pendingShopDetails) {
+        // Came from the Register screen with details already filled in —
+        // save those and go straight in, regardless of profileCompleted.
         await registerShop({
           shopName: pendingShopDetails.shopName,
           gstNumber: pendingShopDetails.gstNumber,
@@ -55,8 +57,16 @@ export default function OtpVerifyScreen({ navigation, route }: Props) {
           contactNumber: pendingShopDetails.contactNumber,
           logoUri: pendingShopDetails.shopLogoUri,
         });
+        navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+      } else if (!profileCompleted) {
+        // Logged in directly without ever saving real shop details (either
+        // a brand new phone number, or one that closed the app mid-setup
+        // last time) — get those before landing on the Dashboard, instead
+        // of silently starting them off with a blank "My Shop".
+        navigation.reset({ index: 0, routes: [{ name: 'CompleteProfile' }] });
+      } else {
+        navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
       }
-      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
     } catch (err) {
       setError(getAuthErrorMessage(err, 'Invalid OTP. Please try again.'));
     } finally {

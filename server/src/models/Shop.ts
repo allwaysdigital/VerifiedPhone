@@ -31,6 +31,11 @@ const shopSchema = new Schema(
     address: { type: String, default: '' },
     contactNumber: { type: String, default: '' },
     logoUrl: { type: String, default: null },
+    // False until the dealer actually saves shop details for the first
+    // time (via Register, or the post-login Complete Profile screen) —
+    // resolveShop's lazy upsert creates a shop with defaults the moment any
+    // authenticated call is made, before anyone has entered anything real.
+    profileCompleted: { type: Boolean, default: false },
     subscription: { type: subscriptionSchema, default: () => ({}) },
   },
   { timestamps: true },

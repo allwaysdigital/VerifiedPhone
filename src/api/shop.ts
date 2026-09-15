@@ -10,6 +10,7 @@ type RawShopResponse = {
   contactNumber: string;
   logoUrl: string | null;
   phoneNumber?: string;
+  profileCompleted?: boolean;
   subscription: Subscription;
 };
 
@@ -25,6 +26,7 @@ function toClient(raw: RawShopResponse): ShopWithSubscription {
       contactNumber: raw.contactNumber,
       logoUrl: resolveUrl(raw.logoUrl),
       phoneNumber: raw.phoneNumber,
+      profileCompleted: raw.profileCompleted ?? false,
     },
     subscription: raw.subscription,
   };

@@ -55,6 +55,17 @@ export async function verifyOtp(req: Request, res: Response) {
   const existingShop = await Shop.findOne({ phoneNumber });
   const uid = existingShop ? existingShop.firebaseUid : `otp:${phoneNumber}`;
 
+  // Tells the app whether to send this phone number straight to the
+  // Dashboard or through the mandatory "complete your profile" screen
+  // first — resolveShop would otherwise silently create a blank "My Shop"
+  // on the first authenticated call and nobody would ever fill in real
+  // shop details. Driven by the shop's own profileCompleted flag rather
+  // than just "does a shop exist yet", so this stays consistent with the
+  // same check Splash re-runs on every later app launch — a shop that
+  // exists but was never actually filled in (e.g. someone closed the app
+  // mid-setup) still routes to Complete Profile here, not just on Splash.
+  const profileCompleted = existingShop?.profileCompleted ?? false;
+
   const token = await signAppToken({ uid, phoneNumber });
-  res.json({ token });
+  res.json({ token, profileCompleted });
 }

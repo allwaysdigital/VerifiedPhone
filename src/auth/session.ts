@@ -37,16 +37,24 @@ export async function sendOtp(dialCode: string, localMobile: string): Promise<st
 
 // Checks the OTP against that session; on success, persists the app's own
 // session token and notifies anything listening via subscribeToAuthState.
+// profileCompleted tells the caller whether this shop has ever saved real
+// details, so the screen can route to profile setup instead of the
+// Dashboard — same flag Splash re-checks on every later launch.
 export async function verifyOtp(
   dialCode: string,
   localMobile: string,
   sessionId: string,
   otp: string,
-): Promise<void> {
-  const { token } = await apiVerifyOtp(toE164(dialCode, localMobile), sessionId, otp);
+): Promise<{ profileCompleted: boolean }> {
+  const { token, profileCompleted } = await apiVerifyOtp(
+    toE164(dialCode, localMobile),
+    sessionId,
+    otp,
+  );
   cachedToken = token;
   await AsyncStorage.setItem(TOKEN_KEY, token);
   notify(true);
+  return { profileCompleted };
 }
 
 // Fires once immediately with the current signed-in state, then again on

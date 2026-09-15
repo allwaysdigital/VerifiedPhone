@@ -43,6 +43,7 @@ export type RootStackParamList = {
     pendingShopDetails?: PendingShopDetails;
   };
   Register: undefined;
+  CompleteProfile: undefined;
   MainTabs: undefined;
   DigitalSignature: { purchaseData: PendingPurchaseData };
   DeviceDetails: { deviceId: string };

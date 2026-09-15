@@ -7,6 +7,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OtpVerifyScreen from '../screens/OtpVerifyScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import CompleteProfileScreen from '../screens/CompleteProfileScreen';
 import MainTabs from './MainTabs';
 import DigitalSignatureScreen from '../screens/DigitalSignatureScreen';
 import DeviceDetailsScreen from '../screens/DeviceDetailsScreen';
@@ -33,6 +34,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="DigitalSignature" component={DigitalSignatureScreen} />
         <Stack.Screen name="DeviceDetails" component={DeviceDetailsScreen} />

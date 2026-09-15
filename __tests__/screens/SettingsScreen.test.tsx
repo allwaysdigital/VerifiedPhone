@@ -31,6 +31,7 @@ function renderScreen(shopDataOverrides: Parameters<typeof createMockShopDataCon
       address: '',
       contactNumber: '9876543210',
       logoUrl: null,
+      profileCompleted: true,
     },
     subscription: {
       status: 'trial',
@@ -59,18 +60,20 @@ describe('SettingsScreen shop details form', () => {
     expect(screen.getByText('This field is required')).toBeTruthy();
   });
 
-  test('rejects a badly formatted GST number', () => {
-    renderScreen();
+  test('saves even a badly formatted GST number — the field is unvalidated', async () => {
+    const { shopData } = renderScreen();
     const { gstNumber, address } = getFields();
 
     fireEvent.changeText(gstNumber, 'BADGST123');
     fireEvent.changeText(address, '123 Main Street');
     fireEvent.press(screen.getByText('Save Shop Details'));
 
-    expect(
-      screen.getByText('Enter a valid GST number (e.g., 27AABCU9603R1ZM)'),
-    ).toBeTruthy();
-    expect(screen.queryByText('This field is required')).toBeNull();
+    await waitFor(() =>
+      expect(shopData.updateShop).toHaveBeenCalledWith(
+        expect.objectContaining({ gstNumber: 'BADGST123' }),
+      ),
+    );
+    expect(screen.queryByText(/Enter a valid GST number/)).toBeNull();
   });
 
   test('accepts a fully valid form and saves it', async () => {

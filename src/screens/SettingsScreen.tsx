@@ -22,11 +22,9 @@ import ShopIcon from '../assets/icons/shop_details_icon.svg';
 import { UploadField } from '../components/FormControls';
 import { GiftIcon, WarningIcon } from '../components/SubscriptionIcons';
 import {
-  GST_MESSAGE,
   MOBILE_MESSAGE,
   REQUIRED_MESSAGE,
   isRequired,
-  isValidGst,
   isValidMobile,
 } from '../utils/validators';
 
@@ -104,9 +102,6 @@ export default function SettingsScreen({ navigation }: Props) {
     const nextErrors: FormErrors = {};
     if (!isRequired(shopName)) {
       nextErrors.shopName = REQUIRED_MESSAGE;
-    }
-    if (gstNumber.trim() && !isValidGst(gstNumber)) {
-      nextErrors.gstNumber = GST_MESSAGE;
     }
     if (!isRequired(address)) {
       nextErrors.address = REQUIRED_MESSAGE;

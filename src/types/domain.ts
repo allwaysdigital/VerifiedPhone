@@ -108,6 +108,7 @@ export type Shop = {
   contactNumber: string;
   logoUrl: string | null;
   phoneNumber?: string;
+  profileCompleted: boolean;
 };
 
 export function formatSubscriptionDate(isoDate: string): string {

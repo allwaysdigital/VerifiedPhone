@@ -13,6 +13,8 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
+import { useDisableBackNavigation } from '../hooks/useDisableBackNavigation';
+import { useShopData } from '../context/ShopDataContext';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
 import { UploadField } from '../components/FormControls';
 import {
@@ -22,7 +24,7 @@ import {
   isValidMobile,
 } from '../utils/validators';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'CompleteProfile'>;
 
 type FormErrors = {
   shopName?: string;
@@ -31,14 +33,26 @@ type FormErrors = {
   contactNumber?: string;
 };
 
-export default function RegisterScreen({ navigation }: Props) {
+// Shown once, right after OTP verification, for a phone number that's never
+// signed in before — without this, resolveShop would silently create a
+// blank "My Shop" placeholder the moment the Dashboard makes its first API
+// call, and the dealer would never actually be asked for their real shop
+// details. Same form as Register (that one still runs pre-login for anyone
+// who taps "Register" first); this one runs post-login and saves straight
+// to the already-authenticated shop instead of carrying details through to
+// a signup step.
+export default function CompleteProfileScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  useDisableBackNavigation();
+  const { updateShop } = useShopData();
   const [shopName, setShopName] = useState('');
   const [gstNumber, setGstNumber] = useState('');
   const [address, setAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [shopLogo, setShopLogo] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const validate = (): FormErrors => {
     const nextErrors: FormErrors = {};
@@ -54,32 +68,42 @@ export default function RegisterScreen({ navigation }: Props) {
     return nextErrors;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const nextErrors = validate();
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
+    if (Object.keys(nextErrors).length > 0 || saving) {
       return;
     }
-    navigation.navigate('Login', {
-      pendingShopDetails: {
+    setSaving(true);
+    setSubmitError('');
+    try {
+      await updateShop({
         shopName,
         gstNumber,
         address,
         contactNumber,
-        shopLogoUri: shopLogo,
-      },
-    });
+        logoUri: shopLogo,
+      });
+      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+    } catch (err) {
+      setSubmitError('Could not save your shop details. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Text style={styles.header}>Register</Text>
+      <Text style={styles.header}>Complete Your Profile</Text>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.card}>
           <View style={styles.titleRow}>
             <ShopIcon width={20} height={20} />
             <Text style={styles.title}>Shop Details</Text>
           </View>
+          <Text style={styles.intro}>
+            One-time setup — tell us about your shop before you start managing stock.
+          </Text>
 
           <Text style={styles.label}>Shop Name</Text>
           <View style={styles.fieldWrap}>
@@ -156,8 +180,13 @@ export default function RegisterScreen({ navigation }: Props) {
 
           <UploadField label="Shop Logo" imageUri={shopLogo} onImageSelected={setShopLogo} />
 
-          <TouchableOpacity style={styles.button} onPress={handleSave}>
-            <Text style={styles.buttonText}>Save Shop Details</Text>
+          {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+
+          <TouchableOpacity
+            style={[styles.button, saving && styles.buttonDisabled]}
+            onPress={handleSave}
+            disabled={saving}>
+            <Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save & Continue'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -195,12 +224,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 24,
+    marginBottom: 8,
   },
   title: {
     fontFamily: fonts.robotoMedium,
     fontSize: 22,
     color: colors.textMuted,
+  },
+  intro: {
+    fontFamily: fonts.robotoRegular,
+    fontSize: 14,
+    color: colors.textMuted,
+    marginBottom: 24,
   },
   label: {
     fontFamily: fonts.robotoRegular,
@@ -241,6 +276,10 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 4,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     fontFamily: fonts.robotoRegular,

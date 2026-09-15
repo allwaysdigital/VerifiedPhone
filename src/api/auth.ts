@@ -8,7 +8,7 @@ export async function verifyOtp(
   phoneNumber: string,
   sessionId: string,
   otp: string,
-): Promise<{ token: string }> {
+): Promise<{ token: string; profileCompleted: boolean }> {
   return request('/api/auth/verify-otp', {
     method: 'POST',
     body: { phoneNumber, sessionId, otp },
