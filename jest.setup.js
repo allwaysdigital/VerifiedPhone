@@ -7,5 +7,9 @@ jest.mock('@react-navigation/native', () => {
     useFocusEffect: callback => {
       useEffect(() => callback(), [callback]);
     },
+    // Screens using useDisableBackNavigation() call this directly (outside
+    // any navigation prop passed in by a test) — stub it so those screens
+    // don't need a real NavigationContainer just to render in a test.
+    useNavigation: () => ({ setOptions: jest.fn() }),
   };
 });
