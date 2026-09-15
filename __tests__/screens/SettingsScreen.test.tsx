@@ -52,6 +52,29 @@ function renderScreen(shopDataOverrides: Parameters<typeof createMockShopDataCon
 }
 
 describe('SettingsScreen shop details form', () => {
+  test('shows the shop name as an editable field, prefilled from shop data', () => {
+    renderScreen();
+
+    const { shopName } = getFields();
+    expect(shopName.props.value).toBe('Mobile Hub');
+    expect(screen.UNSAFE_getAllByType(TextInput)).toHaveLength(4);
+  });
+
+  test('saves an edited shop name', async () => {
+    const { shopData } = renderScreen();
+    const { shopName, address } = getFields();
+
+    fireEvent.changeText(shopName, 'New Shop Name');
+    fireEvent.changeText(address, '123 Main Street');
+    fireEvent.press(screen.getByText('Save Shop Details'));
+
+    await waitFor(() =>
+      expect(shopData.updateShop).toHaveBeenCalledWith(
+        expect.objectContaining({ shopName: 'New Shop Name' }),
+      ),
+    );
+  });
+
   test('requires an address before saving', () => {
     renderScreen();
 

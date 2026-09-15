@@ -9,6 +9,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
+import { SHOP_NAME } from '../constants/app';
 import { formatINR, formatLakhs } from '../utils/format';
 import EmptyState from '../components/EmptyState';
 import HeaderLogo from '../assets/icons/header_logo.svg';
@@ -78,7 +79,7 @@ function todayLabel(): string {
 export default function DashboardScreen({ navigation }: Props) {
   useScreenStatusBar('light-content', colors.primary);
   const insets = useSafeAreaInsets();
-  const { devices } = useShopData();
+  const { shop, devices } = useShopData();
 
   const today = todayLabel();
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -139,7 +140,7 @@ export default function DashboardScreen({ navigation }: Props) {
           <View style={styles.headerLogoRow}>
             <HeaderLogo width={32} height={32} />
             <View>
-              <Text style={styles.headerTitle}>Mobile Hub</Text>
+              <Text style={styles.headerTitle}>{shop?.shopName || SHOP_NAME}</Text>
               <Text style={styles.headerWordmark}>
                 VERIFIED <Text style={styles.headerWordmarkBold}>PHONE</Text> — DEALER SATHI
               </Text>

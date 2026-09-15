@@ -97,6 +97,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [shopLogo, setShopLogo] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -138,13 +139,14 @@ export default function SettingsScreen({ navigation }: Props) {
       return;
     }
     setSaving(true);
+    setSaveError('');
     try {
       // A logo URI that already starts with http(s) is the existing server-hosted
       // image, not a newly picked local file — only upload when it's a local URI.
       const logoUri = shopLogo && !shopLogo.startsWith('http') ? shopLogo : null;
       await updateShop({ shopName, gstNumber, address, contactNumber, logoUri });
     } catch (err) {
-      setErrors({ shopName: 'Could not save shop details. Please try again.' });
+      setSaveError('Could not save shop details. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -247,6 +249,8 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
 
           <UploadField label="Shop Logo" imageUri={shopLogo} onImageSelected={setShopLogo} />
+
+          {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
 
           <TouchableOpacity
             style={[styles.button, saving && styles.buttonDisabled]}

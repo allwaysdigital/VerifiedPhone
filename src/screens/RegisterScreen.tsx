@@ -15,6 +15,7 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
 import { UploadField } from '../components/FormControls';
+import { SHOP_NAME } from '../constants/app';
 import {
   MOBILE_MESSAGE,
   REQUIRED_MESSAGE,
@@ -33,7 +34,7 @@ type FormErrors = {
 
 export default function RegisterScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const [shopName, setShopName] = useState('');
+  const [shopName, setShopName] = useState(SHOP_NAME);
   const [gstNumber, setGstNumber] = useState('');
   const [address, setAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
