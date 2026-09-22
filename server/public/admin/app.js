@@ -143,17 +143,6 @@
     }
   });
 
-  function cell(label, content) {
-    const td = document.createElement('td');
-    td.setAttribute('data-label', label);
-    if (content instanceof Node) {
-      td.appendChild(content);
-    } else {
-      td.textContent = content ?? '—';
-    }
-    return td;
-  }
-
   function badge(className, text) {
     const span = document.createElement('span');
     span.className = `badge ${className}`;
@@ -382,7 +371,7 @@
   const devicesSearch = document.getElementById('devices-search');
   const devicesStatusFilter = document.getElementById('devices-status-filter');
   const devicesError = document.getElementById('devices-error');
-  const devicesTbody = document.getElementById('devices-tbody');
+  const devicesGrid = document.getElementById('devices-grid');
   const devicesEmpty = document.getElementById('devices-empty');
   const devicesLoadMoreBtn = document.getElementById('devices-load-more');
 
@@ -399,7 +388,7 @@
   function loadDevices({ reset }) {
     if (reset) {
       devicesCursor = null;
-      devicesTbody.innerHTML = '';
+      devicesGrid.innerHTML = '';
     }
     devicesError.hidden = true;
 
@@ -414,7 +403,7 @@
         renderDevices(data.devices, { append: !reset });
         devicesCursor = data.nextCursor;
         devicesLoadMoreBtn.hidden = !devicesCursor;
-        devicesEmpty.hidden = devicesTbody.children.length > 0;
+        devicesEmpty.hidden = devicesGrid.children.length > 0;
       })
       .catch(err => {
         devicesError.textContent = err.message;
@@ -424,31 +413,93 @@
 
   function renderDevices(devices, { append }) {
     if (!append) {
-      devicesTbody.innerHTML = '';
+      devicesGrid.innerHTML = '';
     }
     for (const d of devices) {
-      const tr = document.createElement('tr');
-      tr.appendChild(cell('Shop', shopCell(d.shopName, d.shopPhone)));
-      tr.appendChild(cell('Brand & Model', `${d.brand} ${d.model}`));
-      tr.appendChild(
-        cell('Status', badge(d.status === 'Sold' ? 'sold' : 'available', d.status)),
-      );
-      tr.appendChild(
-        cell(
-          'Verification',
-          badge(d.verification === 'Suspicious' ? 'suspicious' : 'yes', d.verification),
-        ),
-      );
-      tr.appendChild(cell('IMEI', d.imei1));
-      tr.appendChild(cell('Purchase', formatMoney(d.purchasePrice)));
-      tr.appendChild(cell('Sale', formatMoney(d.salePrice)));
-      tr.appendChild(cell('Profit', formatMoney(d.profit)));
-      tr.appendChild(cell('Seller', d.sellerName ? `${d.sellerName} · ${d.sellerMobile}` : '—'));
-      tr.appendChild(cell('Buyer', d.buyerName ? `${d.buyerName} · ${d.buyerMobile}` : '—'));
-      tr.appendChild(cell('Purchased', formatDate(d.purchasedAt)));
-      tr.appendChild(cell('Sold', formatDate(d.soldAt)));
-      devicesTbody.appendChild(tr);
+      devicesGrid.appendChild(buildDeviceCard(d));
     }
+  }
+
+  function moneyField(labelText, value, className) {
+    const wrap = document.createElement('div');
+    wrap.className = 'money-field';
+    const label = document.createElement('span');
+    label.className = 'field-label';
+    label.textContent = labelText;
+    const val = document.createElement('span');
+    val.className = `money-value${className ? ` ${className}` : ''}`;
+    val.textContent = formatMoney(value);
+    wrap.appendChild(label);
+    wrap.appendChild(val);
+    return wrap;
+  }
+
+  function personField(labelText, name, mobile) {
+    const wrap = document.createElement('div');
+    wrap.className = 'person-field';
+    const label = document.createElement('span');
+    label.className = 'field-label';
+    label.textContent = labelText;
+    const val = document.createElement('span');
+    val.className = 'person-value';
+    val.textContent = name ? `${name} · ${mobile}` : '—';
+    wrap.appendChild(label);
+    wrap.appendChild(val);
+    return wrap;
+  }
+
+  function buildDeviceCard(d) {
+    const card = document.createElement('div');
+    card.className = 'device-card';
+
+    const header = document.createElement('div');
+    header.className = 'device-card-header';
+    header.appendChild(shopCell(d.shopName, d.shopPhone));
+    const badges = document.createElement('div');
+    badges.className = 'device-card-badges';
+    badges.appendChild(badge(d.status === 'Sold' ? 'sold' : 'available', d.status));
+    badges.appendChild(
+      badge(d.verification === 'Suspicious' ? 'suspicious' : 'yes', d.verification),
+    );
+    header.appendChild(badges);
+    card.appendChild(header);
+
+    const title = document.createElement('div');
+    title.className = 'device-card-title';
+    const model = document.createElement('div');
+    model.className = 'device-card-model';
+    model.textContent = `${d.brand} ${d.model}`;
+    const imei = document.createElement('div');
+    imei.className = 'device-card-imei';
+    imei.textContent = d.imei1 ? `IMEI ${d.imei1}` : 'IMEI not recorded';
+    title.appendChild(model);
+    title.appendChild(imei);
+    card.appendChild(title);
+
+    const money = document.createElement('div');
+    money.className = 'device-card-money';
+    money.appendChild(moneyField('Purchase', d.purchasePrice));
+    money.appendChild(moneyField('Sale', d.salePrice));
+    money.appendChild(moneyField('Profit', d.profit, 'profit'));
+    card.appendChild(money);
+
+    const people = document.createElement('div');
+    people.className = 'device-card-people';
+    people.appendChild(personField('Seller', d.sellerName, d.sellerMobile));
+    people.appendChild(personField('Buyer', d.buyerName, d.buyerMobile));
+    card.appendChild(people);
+
+    const footer = document.createElement('div');
+    footer.className = 'device-card-footer';
+    const purchased = document.createElement('span');
+    purchased.textContent = `Purchased ${formatDate(d.purchasedAt)}`;
+    const sold = document.createElement('span');
+    sold.textContent = `Sold ${formatDate(d.soldAt)}`;
+    footer.appendChild(purchased);
+    footer.appendChild(sold);
+    card.appendChild(footer);
+
+    return card;
   }
 
   // ---------- Brands ----------
