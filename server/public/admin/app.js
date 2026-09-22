@@ -156,20 +156,32 @@
     try {
       const data = await api('/api/admin/overview');
       const stats = [
-        { label: 'Total Shops', value: data.totalShops },
-        { label: 'Complete Profiles', value: data.completedProfiles },
-        { label: 'Active Subscriptions', value: data.activeSubs },
-        { label: 'Trial Subscriptions', value: data.trialSubs },
-        { label: 'Total Devices', value: data.totalDevices },
-        { label: 'Available Stock', value: data.availableDevices },
-        { label: 'Sold', value: data.soldDevices },
-        { label: 'Brands', value: data.totalBrands },
+        { label: 'Total Shops', value: data.totalShops, view: 'shops' },
+        { label: 'Complete Profiles', value: data.completedProfiles, view: 'shops' },
+        { label: 'Active Subscriptions', value: data.activeSubs, view: 'shops' },
+        { label: 'Trial Subscriptions', value: data.trialSubs, view: 'shops' },
+        { label: 'Total Devices', value: data.totalDevices, view: 'devices', status: '' },
+        {
+          label: 'Available Stock',
+          value: data.availableDevices,
+          view: 'devices',
+          status: 'Available',
+        },
+        { label: 'Sold', value: data.soldDevices, view: 'devices', status: 'Sold' },
+        { label: 'Brands', value: data.totalBrands, view: 'brands' },
       ];
       grid.innerHTML = '';
       for (const stat of stats) {
-        const card = document.createElement('div');
+        const card = document.createElement('button');
+        card.type = 'button';
         card.className = 'stat-card';
         card.innerHTML = `<div class="stat-value">${stat.value}</div><div class="stat-label">${stat.label}</div>`;
+        card.addEventListener('click', () => {
+          if (stat.status !== undefined) {
+            devicesStatusFilter.value = stat.status;
+          }
+          switchView(stat.view);
+        });
         grid.appendChild(card);
       }
     } catch (err) {
