@@ -1,12 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
-import { formatINR, formatLakhs } from '../utils/format';
+import { formatINR, formatLakhs, profitLossLabel } from '../utils/format';
+import { parseDMY } from '../utils/date';
 import type { Device } from '../types/domain';
 import BarChart, { ChartSeries } from '../components/BarChart';
+
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'Reports'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
 
 type Period = 'Daily' | 'Monthly' | 'Yearly';
 const PERIODS: Period[] = ['Daily', 'Monthly', 'Yearly'];
@@ -19,6 +29,8 @@ type PeriodData = {
   saleValue: string;
   saleCaption: string;
   netProfit: string;
+  netProfitLabel: string;
+  isNetLoss: boolean;
   chartTitle: string;
   categories: string[];
   yMax: number;
@@ -54,17 +66,6 @@ const PERIOD_META: Record<
     formatValue: formatLakhs,
   },
 };
-
-function parseDMY(value?: string): Date | null {
-  if (!value) {
-    return null;
-  }
-  const [day, month, year] = value.split('/').map(Number);
-  if (!day || !month || !year) {
-    return null;
-  }
-  return new Date(year, month - 1, day);
-}
 
 function niceYAxis(maxValue: number): { yMax: number; yStep: number } {
   const safeMax = Math.max(maxValue, 4);
@@ -143,7 +144,9 @@ function buildPeriodData(period: Period, devices: Device[]): PeriodData {
     saleLabel: meta.saleLabel,
     saleValue: meta.formatValue(saleTotal),
     saleCaption: `${saleCount} device${saleCount === 1 ? '' : 's'}`,
-    netProfit: meta.formatValue(profitTotal),
+    netProfit: meta.formatValue(Math.abs(profitTotal)),
+    netProfitLabel: profitLossLabel(profitTotal, 'Net'),
+    isNetLoss: profitTotal < 0,
     chartTitle: meta.chartTitle,
     categories,
     yMax,
@@ -154,7 +157,7 @@ function buildPeriodData(period: Period, devices: Device[]): PeriodData {
   };
 }
 
-export default function ReportsScreen() {
+export default function ReportsScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const { devices } = useShopData();
   const [period, setPeriod] = useState<Period>('Daily');
@@ -188,7 +191,10 @@ export default function ReportsScreen() {
         </View>
 
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('PurchaseList')}>
             <View style={styles.statCardHeader}>
               <Text style={styles.statLabel}>{data.purchaseLabel}</Text>
               {data.purchaseCaption ? (
@@ -201,8 +207,11 @@ export default function ReportsScreen() {
             {data.purchaseCaption ? (
               <Text style={styles.statCaption}>{data.purchaseCaption}</Text>
             ) : null}
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('SaleList')}>
             <View style={styles.statCardHeader}>
               <Text style={styles.statLabel}>{data.saleLabel}</Text>
               {data.saleCaption ? (
@@ -215,16 +224,24 @@ export default function ReportsScreen() {
             {data.saleCaption ? (
               <Text style={styles.statCaption}>{data.saleCaption}</Text>
             ) : null}
-          </View>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.netProfitCard}>
+        <TouchableOpacity
+          style={styles.netProfitCard}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('ProfitList')}>
           <View style={styles.netProfitHeader}>
-            <Text style={styles.statLabel}>Net Profit</Text>
-            <Text style={[styles.statIcon, { color: colors.greenDark }]}>↗</Text>
+            <Text style={styles.statLabel}>{data.netProfitLabel}</Text>
+            <Text style={[styles.statIcon, { color: data.isNetLoss ? colors.danger : colors.greenDark }]}>
+              {data.isNetLoss ? '↘' : '↗'}
+            </Text>
           </View>
-          <Text style={styles.netProfitValue}>{data.netProfit}</Text>
-        </View>
+          <Text
+            style={[styles.netProfitValue, data.isNetLoss ? { color: colors.danger } : null]}>
+            {data.netProfit}
+          </Text>
+        </TouchableOpacity>
 
         <View style={styles.chartCard}>
           <Text style={styles.chartTitle}>{data.chartTitle}</Text>
@@ -303,13 +320,16 @@ const styles = StyleSheet.create({
   statCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 6,
   },
   statLabel: {
+    flex: 1,
     fontSize: 15,
     color: colors.textMuted,
   },
   statIcon: {
+    flexShrink: 0,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -334,7 +354,8 @@ const styles = StyleSheet.create({
   netProfitHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 6,
   },
   netProfitValue: {
     fontSize: 28,

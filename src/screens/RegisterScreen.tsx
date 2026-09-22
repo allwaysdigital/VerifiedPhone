@@ -15,12 +15,11 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
 import { UploadField } from '../components/FormControls';
+import { SHOP_NAME } from '../constants/app';
 import {
-  GST_MESSAGE,
   MOBILE_MESSAGE,
   REQUIRED_MESSAGE,
   isRequired,
-  isValidGst,
   isValidMobile,
 } from '../utils/validators';
 
@@ -35,7 +34,7 @@ type FormErrors = {
 
 export default function RegisterScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const [shopName, setShopName] = useState('');
+  const [shopName, setShopName] = useState(SHOP_NAME);
   const [gstNumber, setGstNumber] = useState('');
   const [address, setAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
@@ -46,9 +45,6 @@ export default function RegisterScreen({ navigation }: Props) {
     const nextErrors: FormErrors = {};
     if (!isRequired(shopName)) {
       nextErrors.shopName = REQUIRED_MESSAGE;
-    }
-    if (gstNumber.trim() && !isValidGst(gstNumber)) {
-      nextErrors.gstNumber = GST_MESSAGE;
     }
     if (!isRequired(address)) {
       nextErrors.address = REQUIRED_MESSAGE;

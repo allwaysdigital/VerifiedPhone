@@ -6,6 +6,7 @@ type ImageFields = {
   phoneFrontImage?: Express.Multer.File[];
   phoneBackImage?: Express.Multer.File[];
   oldPhoneBill?: Express.Multer.File[];
+  sellerPhoto?: Express.Multer.File[];
   aadhaarFront?: Express.Multer.File[];
   aadhaarBack?: Express.Multer.File[];
 };
@@ -48,6 +49,7 @@ function serializeDevice(device: InstanceType<typeof Device>) {
     phoneFrontImageUrl: device.phoneFrontImageUrl,
     phoneBackImageUrl: device.phoneBackImageUrl,
     oldPhoneBillUrl: device.oldPhoneBillUrl,
+    sellerPhotoUrl: device.sellerPhotoUrl,
     aadhaarFrontUrl: device.aadhaarFrontUrl,
     aadhaarBackUrl: device.aadhaarBackUrl,
     buyerName: device.buyerName,
@@ -106,12 +108,14 @@ export async function createDevice(req: Request, res: Response) {
     phoneFrontImageUrl,
     phoneBackImageUrl,
     oldPhoneBillUrl,
+    sellerPhotoUrl,
     aadhaarFrontUrl,
     aadhaarBackUrl,
   ] = await Promise.all([
     fileToUrl(req, files.phoneFrontImage?.[0]),
     fileToUrl(req, files.phoneBackImage?.[0]),
     fileToUrl(req, files.oldPhoneBill?.[0]),
+    fileToUrl(req, files.sellerPhoto?.[0]),
     fileToUrl(req, files.aadhaarFront?.[0]),
     fileToUrl(req, files.aadhaarBack?.[0]),
   ]);
@@ -141,6 +145,7 @@ export async function createDevice(req: Request, res: Response) {
     phoneFrontImageUrl,
     phoneBackImageUrl,
     oldPhoneBillUrl,
+    sellerPhotoUrl,
     aadhaarFrontUrl,
     aadhaarBackUrl,
   });

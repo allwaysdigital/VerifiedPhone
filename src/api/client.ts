@@ -1,17 +1,11 @@
-import { getIdToken } from '../auth/firebaseAuth';
+import { getToken } from '../auth/session';
 import { API_BASE_URL } from './config';
+import { ApiError } from './apiError';
 
-export class ApiError extends Error {
-  status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
+export { ApiError };
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const token = await getIdToken();
+  const token = await getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

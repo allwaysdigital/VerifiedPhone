@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VerifiedPhone Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="login-view" class="view login-screen">
+    <div class="login-brand-panel">
+      <div class="login-brand-inner">
+        <div class="login-mark">VP</div>
+        <h2>VERIFIED <span>PHONE</span></h2>
+        <p>Dealer Sathi — Admin Console</p>
+        <ul class="login-brand-points">
+          <li>Manage every shop and subscription</li>
+          <li>Track stock across all dealers</li>
+          <li>Curate the shared brand catalog</li>
+        </ul>
+      </div>
+    </div>
+    <div class="login-form-panel">
+      <form id="login-form" class="login-card">
+        <div class="login-mark login-mark-mobile">VP</div>
+        <h1>Welcome back</h1>
+        <p class="login-sub">Sign in to manage shops, stock, and brands.</p>
+        <label>
+          Email
+          <input type="email" id="login-email" required autocomplete="username" placeholder="you@company.com" />
+        </label>
+        <label>
+          Password
+          <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••" />
+        </label>
+        <p id="login-error" class="error" hidden></p>
+        <button type="submit">Log in</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-view" class="view app-shell" hidden>
+    <div class="backdrop" id="backdrop" hidden></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-mark">VP</div>
+        <div class="brand-name">VerifiedPhone<span>Admin Console</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item" data-view="overview">
+          <span class="nav-icon" data-icon="overview"></span> Overview
+        </button>
+        <button class="nav-item" data-view="shops">
+          <span class="nav-icon" data-icon="shops"></span> Shops
+        </button>
+        <button class="nav-item" data-view="devices">
+          <span class="nav-icon" data-icon="devices"></span> Devices
+        </button>
+        <button class="nav-item" data-view="brands">
+          <span class="nav-icon" data-icon="brands"></span> Brands
+        </button>
+      </nav>
+      <button class="sidebar-logout" id="logout-btn">
+        <span class="nav-icon" data-icon="logout"></span> Log out
+      </button>
+    </aside>
+
+    <main class="main">
+      <header class="main-header">
+        <button class="hamburger" id="hamburger-btn" aria-label="Toggle menu">
+          <span class="nav-icon" data-icon="menu"></span>
+        </button>
+        <h1 id="page-title">Overview</h1>
+      </header>
+
+      <div class="main-content">
+        <!-- Overview -->
+        <section class="panel" data-panel="overview">
+          <div class="stat-grid" id="stat-grid"></div>
+        </section>
+
+        <!-- Shops -->
+        <section class="panel" data-panel="shops" hidden>
+          <div class="panel-toolbar">
+            <input type="search" id="shops-search" placeholder="Search phone or shop name…" />
+          </div>
+          <p class="error" id="shops-error" hidden></p>
+          <div class="shop-grid" id="shops-grid"></div>
+          <p class="empty-state" id="shops-empty" hidden>No shops found.</p>
+        </section>
+
+        <!-- Devices -->
+        <section class="panel" data-panel="devices" hidden>
+          <div class="panel-toolbar">
+            <input type="search" id="devices-search" placeholder="Search brand, model, IMEI, seller, buyer…" />
+            <select id="devices-status-filter">
+              <option value="">All statuses</option>
+              <option value="Available">Available</option>
+              <option value="Sold">Sold</option>
+            </select>
+          </div>
+          <p class="error" id="devices-error" hidden></p>
+          <div class="device-grid" id="devices-grid"></div>
+          <p class="empty-state" id="devices-empty" hidden>No devices found.</p>
+          <button class="secondary" id="devices-load-more" hidden>Load more</button>
+        </section>
+
+        <!-- Brands -->
+        <section class="panel" data-panel="brands" hidden>
+          <form class="inline-form" id="brand-form">
+            <input type="text" id="brand-name-input" placeholder="New brand name" required />
+            <button type="submit">Add brand</button>
+          </form>
+          <p class="error" id="brands-error" hidden></p>
+          <div class="chip-grid" id="brands-grid"></div>
+          <p class="empty-state" id="brands-empty" hidden>No brands yet.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

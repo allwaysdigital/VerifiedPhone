@@ -33,11 +33,15 @@ export type Device = {
   phoneFrontImageUrl?: string | null;
   phoneBackImageUrl?: string | null;
   oldPhoneBillUrl?: string | null;
+  sellerPhotoUrl?: string | null;
   aadhaarFrontUrl?: string | null;
   aadhaarBackUrl?: string | null;
   buyerName?: string;
   buyerMobile?: string;
   buyerAddress?: string;
+  buyerPhotoUrl?: string | null;
+  buyerAadhaarFrontUrl?: string | null;
+  buyerAadhaarBackUrl?: string | null;
   salePrice?: number;
   warrantyPeriod?: string;
 };
@@ -108,6 +112,7 @@ export type Shop = {
   contactNumber: string;
   logoUrl: string | null;
   phoneNumber?: string;
+  profileCompleted: boolean;
 };
 
 export function formatSubscriptionDate(isoDate: string): string {

@@ -15,7 +15,7 @@ import type { Device } from '../types/domain';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InvoicePreview'>;
 
-const SHOP_NAME = 'Mobile Hub';
+const DEFAULT_SHOP_NAME = 'Mobile Hub';
 const SHOP_ADDRESS = '123 Main Street, Mumbai, Maharashtra - 400001';
 const SHOP_CONTACT = '+91 98765 43210';
 const SHOP_GST = '27AABCU9603R1ZM';
@@ -32,6 +32,7 @@ function formatDate(date: Date): string {
 }
 
 function buildInvoiceHtml(params: {
+  shopName: string;
   invoiceNumber: string;
   invoiceDate: string;
   device: Device;
@@ -41,7 +42,7 @@ function buildInvoiceHtml(params: {
   salePrice: number;
   warrantyPeriod: string;
 }): string {
-  const { invoiceNumber, invoiceDate, device, customerName, customerMobile, customerAddress, salePrice, warrantyPeriod } =
+  const { shopName, invoiceNumber, invoiceDate, device, customerName, customerMobile, customerAddress, salePrice, warrantyPeriod } =
     params;
   const formattedPrice = `₹${salePrice.toLocaleString('en-IN')}`;
 
@@ -75,7 +76,7 @@ function buildInvoiceHtml(params: {
       </head>
       <body>
         <div class="header">
-          <h1>${SHOP_NAME}</h1>
+          <h1>${shopName}</h1>
           <p>${SHOP_ADDRESS}</p>
           <p>Contact: ${SHOP_CONTACT}</p>
           <p>GST: ${SHOP_GST}</p>
@@ -115,7 +116,7 @@ function buildInvoiceHtml(params: {
 
           <div class="signature">
             <div class="label">Authorized Signature</div>
-            <div class="shop">${SHOP_NAME}</div>
+            <div class="shop">${shopName}</div>
           </div>
         </div>
       </body>
@@ -127,7 +128,8 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   const { deviceId, customerName, customerMobile, customerAddress, salePrice, warrantyPeriod } =
     route.params;
-  const { devices } = useShopData();
+  const { shop, devices } = useShopData();
+  const shopName = shop?.shopName || DEFAULT_SHOP_NAME;
   const device = devices.find(d => d.id === deviceId);
   const [invoiceNumber] = useState(() => `SAL${Date.now()}`);
   const [invoiceDate] = useState(() => formatDate(new Date()));
@@ -152,6 +154,7 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
 
   const generateInvoicePdf = async () => {
     const html = buildInvoiceHtml({
+      shopName,
       invoiceNumber,
       invoiceDate,
       device,
@@ -230,7 +233,7 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
             <View style={styles.shopIconWrap}>
               <InvoiceIcon width={28} height={28} color={colors.primary} />
             </View>
-            <Text style={styles.shopName}>{SHOP_NAME}</Text>
+            <Text style={styles.shopName}>{shopName}</Text>
             <Text style={styles.shopMeta}>{SHOP_ADDRESS}</Text>
             <Text style={styles.shopMeta}>Contact: {SHOP_CONTACT}</Text>
             <Text style={styles.shopMeta}>GST: {SHOP_GST}</Text>
@@ -314,7 +317,7 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
 
             <View style={styles.signatureBlock}>
               <Text style={styles.signatureLabel}>Authorized Signature</Text>
-              <Text style={styles.signatureShop}>{SHOP_NAME}</Text>
+              <Text style={styles.signatureShop}>{shopName}</Text>
             </View>
           </View>
         </View>

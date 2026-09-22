@@ -33,11 +33,15 @@ type RawDevice = {
   phoneFrontImageUrl: string | null;
   phoneBackImageUrl: string | null;
   oldPhoneBillUrl: string | null;
+  sellerPhotoUrl: string | null;
   aadhaarFrontUrl: string | null;
   aadhaarBackUrl: string | null;
   buyerName: string | null;
   buyerMobile: string | null;
   buyerAddress: string | null;
+  buyerPhotoUrl: string | null;
+  buyerAadhaarFrontUrl: string | null;
+  buyerAadhaarBackUrl: string | null;
   salePrice: number | null;
   warrantyPeriod: string | null;
   soldAt: string | null;
@@ -91,11 +95,15 @@ function toClientDevice(raw: RawDevice): Device {
     phoneFrontImageUrl: resolveUrl(raw.phoneFrontImageUrl),
     phoneBackImageUrl: resolveUrl(raw.phoneBackImageUrl),
     oldPhoneBillUrl: resolveUrl(raw.oldPhoneBillUrl),
+    sellerPhotoUrl: resolveUrl(raw.sellerPhotoUrl),
     aadhaarFrontUrl: resolveUrl(raw.aadhaarFrontUrl),
     aadhaarBackUrl: resolveUrl(raw.aadhaarBackUrl),
     buyerName: raw.buyerName ?? undefined,
     buyerMobile: raw.buyerMobile ?? undefined,
     buyerAddress: raw.buyerAddress ?? undefined,
+    buyerPhotoUrl: resolveUrl(raw.buyerPhotoUrl),
+    buyerAadhaarFrontUrl: resolveUrl(raw.buyerAadhaarFrontUrl),
+    buyerAadhaarBackUrl: resolveUrl(raw.buyerAadhaarBackUrl),
     salePrice: raw.salePrice ?? undefined,
     warrantyPeriod: raw.warrantyPeriod ?? undefined,
   };
@@ -133,6 +141,7 @@ export type DeviceCreateInput = {
   phoneFrontImageUri: string | null;
   phoneBackImageUri: string | null;
   oldPhoneBillUri: string | null;
+  sellerPhotoUri: string | null;
   aadhaarFrontUri: string | null;
   aadhaarBackUri: string | null;
 };
@@ -159,6 +168,7 @@ export async function createDevice(input: DeviceCreateInput): Promise<Device> {
     phoneFrontImage: imageFieldToFormFile(input.phoneFrontImageUri),
     phoneBackImage: imageFieldToFormFile(input.phoneBackImageUri),
     oldPhoneBill: imageFieldToFormFile(input.oldPhoneBillUri),
+    sellerPhoto: imageFieldToFormFile(input.sellerPhotoUri),
     aadhaarFront: imageFieldToFormFile(input.aadhaarFrontUri),
     aadhaarBack: imageFieldToFormFile(input.aadhaarBackUri),
   });
@@ -169,11 +179,27 @@ export type MarkDeviceSoldInput = {
   buyerName: string;
   buyerMobile: string;
   buyerAddress: string;
+  buyerPhotoUri: string | null;
+  buyerAadhaarFrontUri: string | null;
+  buyerAadhaarBackUri: string | null;
   salePrice: number;
   warrantyPeriod: string;
 };
 
 export async function markDeviceSold(id: string, input: MarkDeviceSoldInput): Promise<Device> {
-  const raw = await request<RawDevice>(`/api/devices/${id}`, { method: 'PATCH', body: input });
+  const raw = await requestForm<RawDevice>(
+    `/api/devices/${id}`,
+    {
+      buyerName: input.buyerName,
+      buyerMobile: input.buyerMobile,
+      buyerAddress: input.buyerAddress,
+      salePrice: input.salePrice,
+      warrantyPeriod: input.warrantyPeriod,
+      buyerPhoto: imageFieldToFormFile(input.buyerPhotoUri),
+      buyerAadhaarFront: imageFieldToFormFile(input.buyerAadhaarFrontUri),
+      buyerAadhaarBack: imageFieldToFormFile(input.buyerAadhaarBackUri),
+    },
+    { method: 'PATCH' },
+  );
   return toClientDevice(raw);
 }

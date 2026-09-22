@@ -7,12 +7,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { CompositeScreenProps } from '@react-navigation/native';
-import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList, RootStackParamList } from '../navigation/types';
+import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
+import { useDisableBackNavigation } from '../hooks/useDisableBackNavigation';
 import {
   FormCheckbox,
   FormInput,
@@ -33,11 +32,9 @@ import {
   isValidImei,
   isValidMobile,
 } from '../utils/validators';
+import BackButton from '../components/BackButton';
 
-type Props = CompositeScreenProps<
-  BottomTabScreenProps<MainTabParamList, 'AddPurchase'>,
-  NativeStackScreenProps<RootStackParamList>
->;
+type Props = NativeStackScreenProps<RootStackParamList, 'AddPurchase'>;
 
 const CONDITION_OPTIONS = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
 const ACCESSORY_OPTIONS = ['Charger', 'Box', 'Cable', 'Handsfree', 'Original Bill'];
@@ -60,6 +57,7 @@ type FormErrors = {
 
 export default function AddPurchaseScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
+  useDisableBackNavigation();
   const { brands } = useShopData();
   const brandOptions = brands.map(b => b.name);
   const [brand, setBrand] = useState<string | null>(null);
@@ -76,8 +74,8 @@ export default function AddPurchaseScreen({ navigation }: Props) {
   const [accessories, setAccessories] = useState<string[]>(['Charger']);
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
-  const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
+  const [sellerPhoto, setSellerPhoto] = useState<string | null>(null);
   const [phoneFrontImage, setPhoneFrontImage] = useState<string | null>(null);
   const [phoneBackImage, setPhoneBackImage] = useState<string | null>(null);
   const [oldPhoneBill, setOldPhoneBill] = useState<string | null>(null);
@@ -109,7 +107,7 @@ export default function AddPurchaseScreen({ navigation }: Props) {
     if (batteryHealth.trim() && !isPercentage(batteryHealth)) {
       nextErrors.batteryHealth = PERCENTAGE_MESSAGE;
     }
-    if (!isValidImei(imei1)) {
+    if (imei1.trim() && !isValidImei(imei1)) {
       nextErrors.imei1 = IMEI_MESSAGE;
     }
     if (imei2.trim() && !isValidImei(imei2)) {
@@ -161,8 +159,8 @@ export default function AddPurchaseScreen({ navigation }: Props) {
         accessories,
         fullName,
         mobileNumber,
-        address,
         city,
+        sellerPhoto,
         phoneFrontImage,
         phoneBackImage,
         oldPhoneBill,
@@ -174,7 +172,10 @@ export default function AddPurchaseScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.header}>Add Purchase</Text>
+      <View style={styles.headerRow}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Text style={styles.headerTitle}>Add Purchase</Text>
+      </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <FormSection title="Device Information">
           <FormSelect
@@ -242,7 +243,6 @@ export default function AddPurchaseScreen({ navigation }: Props) {
         <FormSection title="IMEI Information">
           <FormInput
             label="IMEI 1"
-            required
             placeholder="Enter 15-Digit IMEI"
             keyboardType="number-pad"
             maxLength={15}
@@ -265,9 +265,11 @@ export default function AddPurchaseScreen({ navigation }: Props) {
               clearError('imei2');
             }}
           />
-          <TouchableOpacity style={styles.verifyButton}>
+          {/* Temporarily hidden per request — not wired to a real verification
+              service yet. Restore by uncommenting when that's ready. */}
+          {/* <TouchableOpacity style={styles.verifyButton}>
             <Text style={styles.verifyButtonText}>Verify IMEI Online</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </FormSection>
 
         <FormSection title="Purchase Details">
@@ -333,13 +335,13 @@ export default function AddPurchaseScreen({ navigation }: Props) {
               clearError('mobileNumber');
             }}
           />
-          <FormInput
-            label="Address"
-            placeholder="Enter complete address"
-            value={address}
-            onChangeText={setAddress}
-          />
           <FormInput label="City" placeholder="City" value={city} onChangeText={setCity} />
+          <UploadField
+            testID="upload-seller-photo"
+            label="Personal Photo"
+            imageUri={sellerPhoto}
+            onImageSelected={setSellerPhoto}
+          />
         </FormSection>
 
         <FormSection title="Purchase Details">
@@ -410,12 +412,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
-  header: {
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 12,
-    marginBottom: 8,
     color: colors.text,
   },
   scrollContent: {

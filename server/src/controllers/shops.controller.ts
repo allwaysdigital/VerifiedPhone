@@ -11,6 +11,7 @@ function serializeShop(shop: InstanceType<typeof Shop>) {
     contactNumber: shop.contactNumber,
     logoUrl: shop.logoUrl,
     phoneNumber: shop.phoneNumber,
+    profileCompleted: shop.profileCompleted ?? false,
     subscription: {
       status: shop.subscription?.status ?? 'trial',
       planId: shop.subscription?.planId ?? null,
@@ -34,6 +35,7 @@ export async function register(req: Request, res: Response) {
     gstNumber,
     address,
     contactNumber,
+    profileCompleted: true,
   };
   if (logoUrl) {
     update.logoUrl = logoUrl;
@@ -52,7 +54,7 @@ export async function updateMe(req: Request, res: Response) {
   const { shopName, gstNumber, address, contactNumber } = req.body as Record<string, string>;
   const logoUrl = await fileToUrl(req, req.file);
 
-  const update: Record<string, unknown> = {};
+  const update: Record<string, unknown> = { profileCompleted: true };
   if (shopName !== undefined) update.shopName = shopName;
   if (gstNumber !== undefined) update.gstNumber = gstNumber;
   if (address !== undefined) update.address = address;
