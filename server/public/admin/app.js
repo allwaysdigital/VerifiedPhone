@@ -1,4 +1,26 @@
 (function () {
+  const ICONS = {
+    overview: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    shops: '<path d="M4 9l1-5h14l1 5"/><path d="M4 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"/><path d="M5 9v10h14V9"/><path d="M9 21v-6h6v6"/>',
+    devices: '<rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/>',
+    brands: '<path d="M20.59 13.41 13.41 20.59a2 2 0 0 1-2.82 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.4" fill="currentColor" stroke="none"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+    menu: '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>',
+    check: '<circle cx="12" cy="12" r="9"/><polyline points="8 12 11 15 16 9"/>',
+    bolt: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>',
+    box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><polyline points="3.5 8.5 12 13 20.5 8.5"/><line x1="12" y1="13" x2="12" y2="22"/>',
+    cart: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',
+  };
+
+  function iconSvg(name) {
+    return `<svg viewBox="0 0 24 24">${ICONS[name] || ''}</svg>`;
+  }
+
+  document.querySelectorAll('[data-icon]').forEach(el => {
+    el.innerHTML = iconSvg(el.dataset.icon);
+  });
+
   const TOKEN_KEY = 'vp_admin_token';
 
   const loginView = document.getElementById('login-view');
@@ -139,6 +161,20 @@
     return span;
   }
 
+  function shopCell(name, phone) {
+    const wrap = document.createElement('div');
+    wrap.className = 'shop-cell';
+    const initial = (name || '?').trim().charAt(0).toUpperCase();
+    wrap.innerHTML = `
+      <div class="shop-avatar">${initial}</div>
+      <div class="shop-cell-text">
+        <span class="shop-cell-name">${name || '—'}</span>
+        <span class="shop-cell-phone">${phone || '—'}</span>
+      </div>
+    `;
+    return wrap;
+  }
+
   function formatDate(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -156,26 +192,34 @@
     try {
       const data = await api('/api/admin/overview');
       const stats = [
-        { label: 'Total Shops', value: data.totalShops, view: 'shops' },
-        { label: 'Complete Profiles', value: data.completedProfiles, view: 'shops' },
-        { label: 'Active Subscriptions', value: data.activeSubs, view: 'shops' },
-        { label: 'Trial Subscriptions', value: data.trialSubs, view: 'shops' },
-        { label: 'Total Devices', value: data.totalDevices, view: 'devices', status: '' },
+        { label: 'Total Shops', value: data.totalShops, view: 'shops', icon: 'shops', color: 'orange' },
+        { label: 'Complete Profiles', value: data.completedProfiles, view: 'shops', icon: 'check', color: 'green' },
+        { label: 'Active Subscriptions', value: data.activeSubs, view: 'shops', icon: 'bolt', color: 'blue' },
+        { label: 'Trial Subscriptions', value: data.trialSubs, view: 'shops', icon: 'clock', color: 'purple' },
+        { label: 'Total Devices', value: data.totalDevices, view: 'devices', status: '', icon: 'devices', color: 'orange' },
         {
           label: 'Available Stock',
           value: data.availableDevices,
           view: 'devices',
           status: 'Available',
+          icon: 'box',
+          color: 'green',
         },
-        { label: 'Sold', value: data.soldDevices, view: 'devices', status: 'Sold' },
-        { label: 'Brands', value: data.totalBrands, view: 'brands' },
+        { label: 'Sold', value: data.soldDevices, view: 'devices', status: 'Sold', icon: 'cart', color: 'purple' },
+        { label: 'Brands', value: data.totalBrands, view: 'brands', icon: 'brands', color: 'blue' },
       ];
       grid.innerHTML = '';
       for (const stat of stats) {
         const card = document.createElement('button');
         card.type = 'button';
         card.className = 'stat-card';
-        card.innerHTML = `<div class="stat-value">${stat.value}</div><div class="stat-label">${stat.label}</div>`;
+        card.innerHTML = `
+          <div class="stat-icon ${stat.color}">${iconSvg(stat.icon)}</div>
+          <div class="stat-body">
+            <div class="stat-value">${stat.value}</div>
+            <div class="stat-label">${stat.label}</div>
+          </div>
+        `;
         card.addEventListener('click', () => {
           if (stat.status !== undefined) {
             devicesStatusFilter.value = stat.status;
@@ -221,8 +265,7 @@
 
     for (const shop of shops) {
       const tr = document.createElement('tr');
-      tr.appendChild(cell('Phone', shop.phoneNumber));
-      tr.appendChild(cell('Shop Name', shop.shopName));
+      tr.appendChild(cell('Shop', shopCell(shop.shopName, shop.phoneNumber)));
       tr.appendChild(
         cell('Profile', badge(shop.profileCompleted ? 'yes' : 'no', shop.profileCompleted ? 'Complete' : 'Incomplete')),
       );
@@ -337,7 +380,7 @@
     }
     for (const d of devices) {
       const tr = document.createElement('tr');
-      tr.appendChild(cell('Shop', `${d.shopName} · ${d.shopPhone}`));
+      tr.appendChild(cell('Shop', shopCell(d.shopName, d.shopPhone)));
       tr.appendChild(cell('Brand & Model', `${d.brand} ${d.model}`));
       tr.appendChild(
         cell('Status', badge(d.status === 'Sold' ? 'sold' : 'available', d.status)),
@@ -364,7 +407,7 @@
   const brandForm = document.getElementById('brand-form');
   const brandNameInput = document.getElementById('brand-name-input');
   const brandsError = document.getElementById('brands-error');
-  const brandsTbody = document.getElementById('brands-tbody');
+  const brandsGrid = document.getElementById('brands-grid');
   const brandsEmpty = document.getElementById('brands-empty');
 
   function loadBrands() {
@@ -378,17 +421,21 @@
   }
 
   function renderBrands(brands) {
-    brandsTbody.innerHTML = '';
+    brandsGrid.innerHTML = '';
     brandsEmpty.hidden = brands.length > 0;
     for (const brand of brands) {
-      const tr = document.createElement('tr');
-      tr.appendChild(cell('Name', brand.name));
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = brand.name;
       const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
       deleteBtn.className = 'icon-btn';
       deleteBtn.textContent = 'Delete';
       deleteBtn.addEventListener('click', () => deleteBrand(brand.id));
-      tr.appendChild(cell('', deleteBtn));
-      brandsTbody.appendChild(tr);
+      chip.appendChild(nameSpan);
+      chip.appendChild(deleteBtn);
+      brandsGrid.appendChild(chip);
     }
   }
 
