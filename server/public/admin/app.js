@@ -236,7 +236,7 @@
   // ---------- Shops ----------
   const shopsSearch = document.getElementById('shops-search');
   const shopsError = document.getElementById('shops-error');
-  const shopsTbody = document.getElementById('shops-tbody');
+  const shopsGrid = document.getElementById('shops-grid');
   const shopsEmpty = document.getElementById('shops-empty');
 
   const SUBSCRIPTION_STATUSES = ['none', 'trial', 'active', 'expired'];
@@ -260,21 +260,60 @@
   }
 
   function renderShops(shops) {
-    shopsTbody.innerHTML = '';
+    shopsGrid.innerHTML = '';
     shopsEmpty.hidden = shops.length > 0;
 
     for (const shop of shops) {
-      const tr = document.createElement('tr');
-      tr.appendChild(cell('Shop', shopCell(shop.shopName, shop.phoneNumber)));
-      tr.appendChild(
-        cell('Profile', badge(shop.profileCompleted ? 'yes' : 'no', shop.profileCompleted ? 'Complete' : 'Incomplete')),
-      );
-      tr.appendChild(cell('Subscription', shopStatusSelect(shop)));
-      tr.appendChild(cell('Plan', shopPlanSelect(shop)));
-      tr.appendChild(cell('OTP Bypass', shopBypassCheckbox(shop)));
-      tr.appendChild(cell('Joined', formatDate(shop.createdAt)));
-      shopsTbody.appendChild(tr);
+      shopsGrid.appendChild(buildShopCard(shop));
     }
+  }
+
+  function field(labelText, control) {
+    const wrap = document.createElement('label');
+    wrap.className = 'field';
+    const label = document.createElement('span');
+    label.className = 'field-label';
+    label.textContent = labelText;
+    wrap.appendChild(label);
+    wrap.appendChild(control);
+    return wrap;
+  }
+
+  function buildShopCard(shop) {
+    const card = document.createElement('div');
+    card.className = 'shop-card';
+
+    const header = document.createElement('div');
+    header.className = 'shop-card-header';
+    header.appendChild(shopCell(shop.shopName, shop.phoneNumber));
+    header.appendChild(
+      badge(shop.profileCompleted ? 'yes' : 'no', shop.profileCompleted ? 'Complete' : 'Incomplete'),
+    );
+    card.appendChild(header);
+
+    const fields = document.createElement('div');
+    fields.className = 'shop-card-fields';
+    fields.appendChild(field('Subscription', shopStatusSelect(shop)));
+    fields.appendChild(field('Plan', shopPlanSelect(shop)));
+    card.appendChild(fields);
+
+    const footer = document.createElement('div');
+    footer.className = 'shop-card-footer';
+    const toggleRow = document.createElement('div');
+    toggleRow.className = 'toggle-row';
+    const toggleLabel = document.createElement('span');
+    toggleLabel.className = 'field-label';
+    toggleLabel.textContent = 'OTP Bypass';
+    toggleRow.appendChild(toggleLabel);
+    toggleRow.appendChild(shopBypassToggle(shop));
+    footer.appendChild(toggleRow);
+    const joined = document.createElement('span');
+    joined.className = 'shop-card-joined';
+    joined.textContent = `Joined ${formatDate(shop.createdAt)}`;
+    footer.appendChild(joined);
+    card.appendChild(footer);
+
+    return card;
   }
 
   function shopStatusSelect(shop) {
@@ -312,12 +351,21 @@
     return select;
   }
 
-  function shopBypassCheckbox(shop) {
+  function shopBypassToggle(shop) {
+    const label = document.createElement('label');
+    label.className = 'toggle';
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.checked = shop.otpBypass;
     input.addEventListener('change', () => saveShop(shop.id, { otpBypass: input.checked }));
-    return input;
+    const track = document.createElement('span');
+    track.className = 'toggle-track';
+    const thumb = document.createElement('span');
+    thumb.className = 'toggle-thumb';
+    track.appendChild(thumb);
+    label.appendChild(input);
+    label.appendChild(track);
+    return label;
   }
 
   async function saveShop(id, patch) {
