@@ -2,17 +2,24 @@
   const TOKEN_KEY = 'vp_admin_token';
 
   const loginView = document.getElementById('login-view');
-  const dashboardView = document.getElementById('dashboard-view');
+  const appView = document.getElementById('app-view');
   const loginForm = document.getElementById('login-form');
   const loginError = document.getElementById('login-error');
-  const dashboardError = document.getElementById('dashboard-error');
-  const searchInput = document.getElementById('search-input');
-  const logoutBtn = document.getElementById('logout-btn');
-  const tbody = document.getElementById('shops-tbody');
-  const emptyState = document.getElementById('empty-state');
 
-  const SUBSCRIPTION_STATUSES = ['none', 'trial', 'active', 'expired'];
-  const PLAN_IDS = ['monthly', 'yearly'];
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('backdrop');
+  const hamburgerBtn = document.getElementById('hamburger-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const pageTitle = document.getElementById('page-title');
+  const navItems = Array.from(document.querySelectorAll('.nav-item'));
+  const panels = Array.from(document.querySelectorAll('.panel'));
+
+  const PAGE_TITLES = {
+    overview: 'Overview',
+    shops: 'Shops',
+    devices: 'Devices',
+    brands: 'Brands',
+  };
 
   function getToken() {
     return localStorage.getItem(TOKEN_KEY);
@@ -49,13 +56,87 @@
 
   function showLogin() {
     loginView.hidden = false;
-    dashboardView.hidden = true;
+    appView.hidden = true;
   }
 
-  function showDashboard() {
+  function showApp() {
     loginView.hidden = true;
-    dashboardView.hidden = false;
-    loadShops();
+    appView.hidden = false;
+    switchView('overview');
+  }
+
+  function switchView(view) {
+    navItems.forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+    panels.forEach(panel => {
+      panel.hidden = panel.dataset.panel !== view;
+    });
+    pageTitle.textContent = PAGE_TITLES[view] || '';
+    closeSidebar();
+
+    if (view === 'overview') loadOverview();
+    if (view === 'shops') loadShops();
+    if (view === 'devices') loadDevices({ reset: true });
+    if (view === 'brands') loadBrands();
+  }
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    backdrop.hidden = false;
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    backdrop.hidden = true;
+  }
+
+  hamburgerBtn.addEventListener('click', () => {
+    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+  });
+  backdrop.addEventListener('click', closeSidebar);
+
+  navItems.forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    clearToken();
+    showLogin();
+  });
+
+  loginForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    loginError.hidden = true;
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    try {
+      const data = await api('/api/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      setToken(data.token);
+      showApp();
+    } catch (err) {
+      loginError.textContent = err.message;
+      loginError.hidden = false;
+    }
+  });
+
+  function cell(label, content) {
+    const td = document.createElement('td');
+    td.setAttribute('data-label', label);
+    if (content instanceof Node) {
+      td.appendChild(content);
+    } else {
+      td.textContent = content ?? '—';
+    }
+    return td;
+  }
+
+  function badge(className, text) {
+    const span = document.createElement('span');
+    span.className = `badge ${className}`;
+    span.textContent = text;
+    return span;
   }
 
   function formatDate(iso) {
@@ -64,49 +145,84 @@
     return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
   }
 
+  function formatMoney(n) {
+    if (n === null || n === undefined) return '—';
+    return `₹${Number(n).toLocaleString('en-IN')}`;
+  }
+
+  // ---------- Overview ----------
+  async function loadOverview() {
+    const grid = document.getElementById('stat-grid');
+    try {
+      const data = await api('/api/admin/overview');
+      const stats = [
+        { label: 'Total Shops', value: data.totalShops },
+        { label: 'Complete Profiles', value: data.completedProfiles },
+        { label: 'Active Subscriptions', value: data.activeSubs },
+        { label: 'Trial Subscriptions', value: data.trialSubs },
+        { label: 'Total Devices', value: data.totalDevices },
+        { label: 'Available Stock', value: data.availableDevices },
+        { label: 'Sold', value: data.soldDevices },
+        { label: 'Brands', value: data.totalBrands },
+      ];
+      grid.innerHTML = '';
+      for (const stat of stats) {
+        const card = document.createElement('div');
+        card.className = 'stat-card';
+        card.innerHTML = `<div class="stat-value">${stat.value}</div><div class="stat-label">${stat.label}</div>`;
+        grid.appendChild(card);
+      }
+    } catch (err) {
+      grid.innerHTML = `<p class="error">${err.message}</p>`;
+    }
+  }
+
+  // ---------- Shops ----------
+  const shopsSearch = document.getElementById('shops-search');
+  const shopsError = document.getElementById('shops-error');
+  const shopsTbody = document.getElementById('shops-tbody');
+  const shopsEmpty = document.getElementById('shops-empty');
+
+  const SUBSCRIPTION_STATUSES = ['none', 'trial', 'active', 'expired'];
+  const PLAN_IDS = ['monthly', 'yearly'];
+
+  let shopsSearchTimer = null;
+  shopsSearch.addEventListener('input', () => {
+    clearTimeout(shopsSearchTimer);
+    shopsSearchTimer = setTimeout(loadShops, 300);
+  });
+
+  function loadShops() {
+    const q = shopsSearch.value.trim();
+    shopsError.hidden = true;
+    api(`/api/admin/shops${q ? `?q=${encodeURIComponent(q)}` : ''}`)
+      .then(data => renderShops(data.shops))
+      .catch(err => {
+        shopsError.textContent = err.message;
+        shopsError.hidden = false;
+      });
+  }
+
   function renderShops(shops) {
-    tbody.innerHTML = '';
-    emptyState.hidden = shops.length > 0;
+    shopsTbody.innerHTML = '';
+    shopsEmpty.hidden = shops.length > 0;
 
     for (const shop of shops) {
       const tr = document.createElement('tr');
-
-      tr.appendChild(cell('Phone', shop.phoneNumber || '—'));
-      tr.appendChild(cell('Shop Name', shop.shopName || '—'));
+      tr.appendChild(cell('Phone', shop.phoneNumber));
+      tr.appendChild(cell('Shop Name', shop.shopName));
       tr.appendChild(
-        cell(
-          'Profile',
-          badge(shop.profileCompleted, shop.profileCompleted ? 'Complete' : 'Incomplete'),
-        ),
+        cell('Profile', badge(shop.profileCompleted ? 'yes' : 'no', shop.profileCompleted ? 'Complete' : 'Incomplete')),
       );
-      tr.appendChild(cell('Subscription', statusSelect(shop)));
-      tr.appendChild(cell('Plan', planSelect(shop)));
-      tr.appendChild(cell('OTP Bypass', bypassCheckbox(shop)));
+      tr.appendChild(cell('Subscription', shopStatusSelect(shop)));
+      tr.appendChild(cell('Plan', shopPlanSelect(shop)));
+      tr.appendChild(cell('OTP Bypass', shopBypassCheckbox(shop)));
       tr.appendChild(cell('Joined', formatDate(shop.createdAt)));
-
-      tbody.appendChild(tr);
+      shopsTbody.appendChild(tr);
     }
   }
 
-  function cell(label, content) {
-    const td = document.createElement('td');
-    td.setAttribute('data-label', label);
-    if (content instanceof Node) {
-      td.appendChild(content);
-    } else {
-      td.textContent = content;
-    }
-    return td;
-  }
-
-  function badge(isPositive, text) {
-    const span = document.createElement('span');
-    span.className = `badge ${isPositive ? 'yes' : 'no'}`;
-    span.textContent = text;
-    return span;
-  }
-
-  function statusSelect(shop) {
+  function shopStatusSelect(shop) {
     const select = document.createElement('select');
     for (const status of SUBSCRIPTION_STATUSES) {
       const option = document.createElement('option');
@@ -121,7 +237,7 @@
     return select;
   }
 
-  function planSelect(shop) {
+  function shopPlanSelect(shop) {
     const select = document.createElement('select');
     const noneOption = document.createElement('option');
     noneOption.value = '';
@@ -141,7 +257,7 @@
     return select;
   }
 
-  function bypassCheckbox(shop) {
+  function shopBypassCheckbox(shop) {
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.checked = shop.otpBypass;
@@ -150,56 +266,149 @@
   }
 
   async function saveShop(id, patch) {
-    dashboardError.hidden = true;
+    shopsError.hidden = true;
     try {
       await api(`/api/admin/shops/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
     } catch (err) {
-      dashboardError.textContent = err.message;
-      dashboardError.hidden = false;
+      shopsError.textContent = err.message;
+      shopsError.hidden = false;
     }
   }
 
-  let searchTimer = null;
-  function loadShops() {
-    const q = searchInput.value.trim();
-    api(`/api/admin/shops${q ? `?q=${encodeURIComponent(q)}` : ''}`)
-      .then(data => renderShops(data.shops))
+  // ---------- Devices ----------
+  const devicesSearch = document.getElementById('devices-search');
+  const devicesStatusFilter = document.getElementById('devices-status-filter');
+  const devicesError = document.getElementById('devices-error');
+  const devicesTbody = document.getElementById('devices-tbody');
+  const devicesEmpty = document.getElementById('devices-empty');
+  const devicesLoadMoreBtn = document.getElementById('devices-load-more');
+
+  let devicesCursor = null;
+
+  let devicesSearchTimer = null;
+  devicesSearch.addEventListener('input', () => {
+    clearTimeout(devicesSearchTimer);
+    devicesSearchTimer = setTimeout(() => loadDevices({ reset: true }), 300);
+  });
+  devicesStatusFilter.addEventListener('change', () => loadDevices({ reset: true }));
+  devicesLoadMoreBtn.addEventListener('click', () => loadDevices({ reset: false }));
+
+  function loadDevices({ reset }) {
+    if (reset) {
+      devicesCursor = null;
+      devicesTbody.innerHTML = '';
+    }
+    devicesError.hidden = true;
+
+    const params = new URLSearchParams();
+    const q = devicesSearch.value.trim();
+    if (q) params.set('q', q);
+    if (devicesStatusFilter.value) params.set('status', devicesStatusFilter.value);
+    if (devicesCursor) params.set('cursor', devicesCursor);
+
+    api(`/api/admin/devices?${params.toString()}`)
+      .then(data => {
+        renderDevices(data.devices, { append: !reset });
+        devicesCursor = data.nextCursor;
+        devicesLoadMoreBtn.hidden = !devicesCursor;
+        devicesEmpty.hidden = devicesTbody.children.length > 0;
+      })
       .catch(err => {
-        dashboardError.textContent = err.message;
-        dashboardError.hidden = false;
+        devicesError.textContent = err.message;
+        devicesError.hidden = false;
       });
   }
 
-  searchInput.addEventListener('input', () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(loadShops, 300);
-  });
+  function renderDevices(devices, { append }) {
+    if (!append) {
+      devicesTbody.innerHTML = '';
+    }
+    for (const d of devices) {
+      const tr = document.createElement('tr');
+      tr.appendChild(cell('Shop', `${d.shopName} · ${d.shopPhone}`));
+      tr.appendChild(cell('Brand & Model', `${d.brand} ${d.model}`));
+      tr.appendChild(
+        cell('Status', badge(d.status === 'Sold' ? 'sold' : 'available', d.status)),
+      );
+      tr.appendChild(
+        cell(
+          'Verification',
+          badge(d.verification === 'Suspicious' ? 'suspicious' : 'yes', d.verification),
+        ),
+      );
+      tr.appendChild(cell('IMEI', d.imei1));
+      tr.appendChild(cell('Purchase', formatMoney(d.purchasePrice)));
+      tr.appendChild(cell('Sale', formatMoney(d.salePrice)));
+      tr.appendChild(cell('Profit', formatMoney(d.profit)));
+      tr.appendChild(cell('Seller', d.sellerName ? `${d.sellerName} · ${d.sellerMobile}` : '—'));
+      tr.appendChild(cell('Buyer', d.buyerName ? `${d.buyerName} · ${d.buyerMobile}` : '—'));
+      tr.appendChild(cell('Purchased', formatDate(d.purchasedAt)));
+      tr.appendChild(cell('Sold', formatDate(d.soldAt)));
+      devicesTbody.appendChild(tr);
+    }
+  }
 
-  loginForm.addEventListener('submit', async event => {
-    event.preventDefault();
-    loginError.hidden = true;
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-    try {
-      const data = await api('/api/admin/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
+  // ---------- Brands ----------
+  const brandForm = document.getElementById('brand-form');
+  const brandNameInput = document.getElementById('brand-name-input');
+  const brandsError = document.getElementById('brands-error');
+  const brandsTbody = document.getElementById('brands-tbody');
+  const brandsEmpty = document.getElementById('brands-empty');
+
+  function loadBrands() {
+    brandsError.hidden = true;
+    api('/api/admin/brands')
+      .then(data => renderBrands(data.brands))
+      .catch(err => {
+        brandsError.textContent = err.message;
+        brandsError.hidden = false;
       });
-      setToken(data.token);
-      showDashboard();
+  }
+
+  function renderBrands(brands) {
+    brandsTbody.innerHTML = '';
+    brandsEmpty.hidden = brands.length > 0;
+    for (const brand of brands) {
+      const tr = document.createElement('tr');
+      tr.appendChild(cell('Name', brand.name));
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'icon-btn';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => deleteBrand(brand.id));
+      tr.appendChild(cell('', deleteBtn));
+      brandsTbody.appendChild(tr);
+    }
+  }
+
+  brandForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    brandsError.hidden = true;
+    const name = brandNameInput.value.trim();
+    if (!name) return;
+    try {
+      await api('/api/admin/brands', { method: 'POST', body: JSON.stringify({ name }) });
+      brandNameInput.value = '';
+      loadBrands();
     } catch (err) {
-      loginError.textContent = err.message;
-      loginError.hidden = false;
+      brandsError.textContent = err.message;
+      brandsError.hidden = false;
     }
   });
 
-  logoutBtn.addEventListener('click', () => {
-    clearToken();
-    showLogin();
-  });
+  async function deleteBrand(id) {
+    brandsError.hidden = true;
+    try {
+      await api(`/api/admin/brands/${id}`, { method: 'DELETE' });
+      loadBrands();
+    } catch (err) {
+      brandsError.textContent = err.message;
+      brandsError.hidden = false;
+    }
+  }
 
+  // ---------- Boot ----------
   if (getToken()) {
-    showDashboard();
+    showApp();
   } else {
     showLogin();
   }

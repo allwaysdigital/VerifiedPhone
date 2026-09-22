@@ -7,9 +7,11 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="login-view" class="view">
+  <div id="login-view" class="view login-screen">
     <form id="login-form" class="login-card">
+      <div class="login-mark">VP</div>
       <h1>VerifiedPhone Admin</h1>
+      <p class="login-sub">Sign in to manage shops, stock, and brands.</p>
       <label>
         Email
         <input type="email" id="login-email" required autocomplete="username" />
@@ -23,32 +25,126 @@
     </form>
   </div>
 
-  <div id="dashboard-view" class="view" hidden>
-    <header class="topbar">
-      <h1>Shops</h1>
-      <div class="topbar-actions">
-        <input type="search" id="search-input" placeholder="Search phone or shop name…" />
-        <button id="logout-btn" class="secondary">Log out</button>
+  <div id="app-view" class="view app-shell" hidden>
+    <div class="backdrop" id="backdrop" hidden></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-mark">VP</div>
+        <div class="brand-name">VerifiedPhone<span>Admin</span></div>
       </div>
-    </header>
+      <nav class="sidebar-nav">
+        <button class="nav-item" data-view="overview">
+          <span class="nav-icon">◱</span> Overview
+        </button>
+        <button class="nav-item" data-view="shops">
+          <span class="nav-icon">🏬</span> Shops
+        </button>
+        <button class="nav-item" data-view="devices">
+          <span class="nav-icon">📱</span> Devices
+        </button>
+        <button class="nav-item" data-view="brands">
+          <span class="nav-icon">🏷</span> Brands
+        </button>
+      </nav>
+      <button class="sidebar-logout" id="logout-btn">Log out</button>
+    </aside>
 
-    <p id="dashboard-error" class="error" hidden></p>
+    <main class="main">
+      <header class="main-header">
+        <button class="hamburger" id="hamburger-btn" aria-label="Toggle menu">☰</button>
+        <h1 id="page-title">Overview</h1>
+      </header>
 
-    <table id="shops-table">
-      <thead>
-        <tr>
-          <th>Phone</th>
-          <th>Shop Name</th>
-          <th>Profile</th>
-          <th>Subscription</th>
-          <th>Plan</th>
-          <th>OTP Bypass</th>
-          <th>Joined</th>
-        </tr>
-      </thead>
-      <tbody id="shops-tbody"></tbody>
-    </table>
-    <p id="empty-state" hidden>No shops found.</p>
+      <div class="main-content">
+        <!-- Overview -->
+        <section class="panel" data-panel="overview">
+          <div class="stat-grid" id="stat-grid"></div>
+        </section>
+
+        <!-- Shops -->
+        <section class="panel" data-panel="shops" hidden>
+          <div class="panel-toolbar">
+            <input type="search" id="shops-search" placeholder="Search phone or shop name…" />
+          </div>
+          <p class="error" id="shops-error" hidden></p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Phone</th>
+                  <th>Shop Name</th>
+                  <th>Profile</th>
+                  <th>Subscription</th>
+                  <th>Plan</th>
+                  <th>OTP Bypass</th>
+                  <th>Joined</th>
+                </tr>
+              </thead>
+              <tbody id="shops-tbody"></tbody>
+            </table>
+          </div>
+          <p class="empty-state" id="shops-empty" hidden>No shops found.</p>
+        </section>
+
+        <!-- Devices -->
+        <section class="panel" data-panel="devices" hidden>
+          <div class="panel-toolbar">
+            <input type="search" id="devices-search" placeholder="Search brand, model, IMEI, seller, buyer…" />
+            <select id="devices-status-filter">
+              <option value="">All statuses</option>
+              <option value="Available">Available</option>
+              <option value="Sold">Sold</option>
+            </select>
+          </div>
+          <p class="error" id="devices-error" hidden></p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Shop</th>
+                  <th>Brand &amp; Model</th>
+                  <th>Status</th>
+                  <th>Verification</th>
+                  <th>IMEI</th>
+                  <th>Purchase</th>
+                  <th>Sale</th>
+                  <th>Profit</th>
+                  <th>Seller</th>
+                  <th>Buyer</th>
+                  <th>Purchased</th>
+                  <th>Sold</th>
+                </tr>
+              </thead>
+              <tbody id="devices-tbody"></tbody>
+            </table>
+          </div>
+          <p class="empty-state" id="devices-empty" hidden>No devices found.</p>
+          <button class="secondary" id="devices-load-more" hidden>Load more</button>
+        </section>
+
+        <!-- Brands -->
+        <section class="panel" data-panel="brands" hidden>
+          <form class="inline-form" id="brand-form">
+            <input type="text" id="brand-name-input" placeholder="New brand name" required />
+            <button type="submit">Add brand</button>
+          </form>
+          <p class="error" id="brands-error" hidden></p>
+          <div class="table-wrap table-wrap-narrow">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="brands-tbody"></tbody>
+            </table>
+          </div>
+          <p class="empty-state" id="brands-empty" hidden>No brands yet.</p>
+        </section>
+      </div>
+    </main>
   </div>
 
   <script src="app.js"></script>
