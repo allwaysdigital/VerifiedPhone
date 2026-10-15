@@ -46,13 +46,19 @@ async function callTwoFactor(path: string): Promise<TwoFactorResponse> {
 // Sends the OTP SMS using the DLT-approved template and returns the session
 // id needed to verify it later. Throws with 2Factor's own reason on failure
 // (bad API key, template mismatch, invalid number, etc.).
+//
+// Using AUTOGEN here, not AUTOGEN2 — this account's SMS OTP template has been
+// delivering as a voice call instead of a text via AUTOGEN2 regardless of
+// which template name is used (confirmed with 2 different approved
+// templates). AUTOGEN is 2Factor's older/simpler OTP generation endpoint;
+// testing whether it routes through SMS correctly where AUTOGEN2 didn't.
 export async function sendOtpViaTwoFactor(e164Phone: string): Promise<string> {
   const apiKey = requireApiKey();
   const template = requireTemplateName();
   const phone = toTwoFactorPhone(e164Phone);
 
   const data = await callTwoFactor(
-    `${apiKey}/SMS/${phone}/AUTOGEN2/${encodeURIComponent(template)}`,
+    `${apiKey}/SMS/${phone}/AUTOGEN/${encodeURIComponent(template)}`,
   );
 
   if (data.Status !== 'Success') {
