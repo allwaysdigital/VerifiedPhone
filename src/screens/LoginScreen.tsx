@@ -61,12 +61,12 @@ export default function LoginScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.logoWrap}>
-        <LogoMark width={137} height={100} />
-      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.centerWrap}>
+        <View style={styles.logoWrap}>
+          <LogoMark width={190} height={180} />
+        </View>
         <View style={styles.card}>
           <Text style={styles.title}>
             <Text style={styles.titleDefault}>Enter your </Text>
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   },
   logoWrap: {
     alignItems: 'center',
-    marginTop: 32,
+    marginBottom: 32,
   },
   centerWrap: {
     flex: 1,
