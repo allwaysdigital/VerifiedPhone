@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 // LAN IP instead. Swap this for your Mac's IP (`ipconfig getifaddr en0`)
 // when running on physical hardware; switch back to 10.0.2.2 for the
 // emulator.
-const DEV_BASE_URL = Platform.OS === 'android' ? 'http://192.168.1.100:4000' : 'http://localhost:4000';
+const DEV_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
 
 const PROD_BASE_URL = 'https://verifiedphone-api.onrender.com';
 
