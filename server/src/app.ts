@@ -32,6 +32,10 @@ export function createApp() {
   // same either way.
   app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 
+  // Play Store requires a live, publicly accessible policy page — not a
+  // PDF/download — linked from the store listing and in-app.
+  app.use('/privacy-policy', express.static(path.join(__dirname, '../public/privacy-policy')));
+
   app.use(errorHandler);
 
   return app;
