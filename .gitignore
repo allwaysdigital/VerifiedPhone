@@ -89,3 +89,6 @@ server/uploads/
 
 # Generated release APKs (see scripts/build-release-apk.sh)
 /release-builds/
+
+# Play Store listing kit (local working docs, not shared via source control)
+/play-store/
