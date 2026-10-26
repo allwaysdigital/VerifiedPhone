@@ -36,6 +36,10 @@ export function createApp() {
   // PDF/download — linked from the store listing and in-app.
   app.use('/privacy-policy', express.static(path.join(__dirname, '../public/privacy-policy')));
 
+  // Required by Play Console's Data Safety form once account creation is
+  // declared — must be a live page, not just a mailto: link.
+  app.use('/delete-account', express.static(path.join(__dirname, '../public/delete-account')));
+
   app.use(errorHandler);
 
   return app;
