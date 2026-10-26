@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { generatePDF } from 'react-native-html-to-pdf';
+import Share from 'react-native-share';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -9,6 +11,7 @@ import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import BackButton from '../components/BackButton';
 import InvoiceIcon from '../assets/icons/invoice_icon.svg';
 import { useShopData } from '../context/ShopDataContext';
+import { buildPoliceExportRecordHtml } from '../utils/policeExportRecord';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PoliceExportRecord'>;
 
@@ -40,9 +43,38 @@ function formatDateTime(date: Date): string {
 
 export default function PoliceExportRecordScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const { devices } = useShopData();
+  const { devices, shop } = useShopData();
   const device = devices.find(d => d.id === route.params.deviceId);
   const [recordGenerated] = useState(() => formatDateTime(new Date()));
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (isDownloading || !device) {
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      const html = buildPoliceExportRecordHtml({ device, shop, recordGenerated });
+      const fileName = `PoliceExportRecord-${device.imei1 || device.id}-${Date.now()}`;
+      const { filePath } = await generatePDF({ html, fileName });
+      await Share.open({
+        url: `file://${filePath}`,
+        type: 'application/pdf',
+        filename: fileName,
+        saveToFiles: true,
+      });
+    } catch (error: any) {
+      if (!error?.message?.includes('User did not share')) {
+        console.error('Police export record PDF generation failed:', error);
+        Alert.alert(
+          'Download failed',
+          error?.message ?? 'Could not generate the record PDF. Please try again.',
+        );
+      }
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   if (!device) {
     return (
@@ -141,8 +173,13 @@ export default function PoliceExportRecordScreen({ navigation, route }: Props) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.downloadButton}>
-          <Text style={styles.downloadButtonText}>Download as PDF</Text>
+        <TouchableOpacity
+          style={[styles.downloadButton, isDownloading && styles.downloadButtonDisabled]}
+          onPress={handleDownloadPdf}
+          disabled={isDownloading}>
+          <Text style={styles.downloadButtonText}>
+            {isDownloading ? 'Preparing PDF…' : 'Download as PDF'}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>Back</Text>
@@ -314,6 +351,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
+  },
+  downloadButtonDisabled: {
+    opacity: 0.6,
   },
   downloadButtonText: {
     color: colors.white,
