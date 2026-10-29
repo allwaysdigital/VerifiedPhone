@@ -11,6 +11,8 @@
     clock: '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>',
     box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><polyline points="3.5 8.5 12 13 20.5 8.5"/><line x1="12" y1="13" x2="12" y2="22"/>',
     cart: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',
+    subscriptions: '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/>',
+    ban: '<circle cx="12" cy="12" r="9"/><line x1="5.5" y1="5.5" x2="18.5" y2="18.5"/>',
   };
 
   function iconSvg(name) {
@@ -39,6 +41,7 @@
   const PAGE_TITLES = {
     overview: 'Overview',
     shops: 'Shops',
+    subscriptions: 'Subscriptions',
     devices: 'Devices',
     brands: 'Brands',
   };
@@ -97,6 +100,7 @@
 
     if (view === 'overview') loadOverview();
     if (view === 'shops') loadShops();
+    if (view === 'subscriptions') loadSubscriptions();
     if (view === 'devices') loadDevices({ reset: true });
     if (view === 'brands') loadBrands();
   }
@@ -305,7 +309,7 @@
     return card;
   }
 
-  function shopStatusSelect(shop) {
+  function shopStatusSelect(shop, opts) {
     const select = document.createElement('select');
     for (const status of SUBSCRIPTION_STATUSES) {
       const option = document.createElement('option');
@@ -315,12 +319,12 @@
       select.appendChild(option);
     }
     select.addEventListener('change', () =>
-      saveShop(shop.id, { subscriptionStatus: select.value }),
+      saveShop(shop.id, { subscriptionStatus: select.value }, opts),
     );
     return select;
   }
 
-  function shopPlanSelect(shop) {
+  function shopPlanSelect(shop, opts) {
     const select = document.createElement('select');
     const noneOption = document.createElement('option');
     noneOption.value = '';
@@ -335,7 +339,7 @@
       select.appendChild(option);
     }
     select.addEventListener('change', () =>
-      saveShop(shop.id, { subscriptionPlanId: select.value || null }),
+      saveShop(shop.id, { subscriptionPlanId: select.value || null }, opts),
     );
     return select;
   }
@@ -357,14 +361,132 @@
     return label;
   }
 
-  async function saveShop(id, patch) {
-    shopsError.hidden = true;
+  async function saveShop(id, patch, opts) {
+    const errorEl = (opts && opts.errorEl) || shopsError;
+    errorEl.hidden = true;
     try {
       await api(`/api/admin/shops/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+      if (opts && opts.onSaved) opts.onSaved();
     } catch (err) {
-      shopsError.textContent = err.message;
-      shopsError.hidden = false;
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
     }
+  }
+
+  // ---------- Subscriptions ----------
+  const subscriptionsSummary = document.getElementById('subscriptions-summary');
+  const subscriptionsSearch = document.getElementById('subscriptions-search');
+  const subscriptionsStatusFilter = document.getElementById('subscriptions-status-filter');
+  const subscriptionsError = document.getElementById('subscriptions-error');
+  const subscriptionsGrid = document.getElementById('subscriptions-grid');
+  const subscriptionsEmpty = document.getElementById('subscriptions-empty');
+
+  const SUBSCRIPTION_SUMMARY_META = [
+    { key: 'active', label: 'Active', icon: 'bolt', color: 'green' },
+    { key: 'trial', label: 'Trial', icon: 'clock', color: 'blue' },
+    { key: 'expired', label: 'Expired', icon: 'ban', color: 'orange' },
+    { key: 'none', label: 'No Plan', icon: 'subscriptions', color: 'purple' },
+  ];
+
+  let subscriptionsSearchTimer = null;
+  subscriptionsSearch.addEventListener('input', () => {
+    clearTimeout(subscriptionsSearchTimer);
+    subscriptionsSearchTimer = setTimeout(loadSubscriptions, 300);
+  });
+  subscriptionsStatusFilter.addEventListener('change', loadSubscriptions);
+
+  function loadSubscriptions() {
+    subscriptionsError.hidden = true;
+    const params = new URLSearchParams();
+    const q = subscriptionsSearch.value.trim();
+    if (q) params.set('q', q);
+    if (subscriptionsStatusFilter.value) params.set('status', subscriptionsStatusFilter.value);
+
+    api(`/api/admin/subscriptions?${params.toString()}`)
+      .then(data => {
+        renderSubscriptionsSummary(data.summary);
+        renderSubscriptions(data.shops);
+      })
+      .catch(err => {
+        subscriptionsError.textContent = err.message;
+        subscriptionsError.hidden = false;
+      });
+  }
+
+  function renderSubscriptionsSummary(summary) {
+    subscriptionsSummary.innerHTML = '';
+    for (const meta of SUBSCRIPTION_SUMMARY_META) {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'stat-card';
+      card.innerHTML = `
+        <div class="stat-icon ${meta.color}">${iconSvg(meta.icon)}</div>
+        <div class="stat-body">
+          <div class="stat-value">${summary[meta.key] || 0}</div>
+          <div class="stat-label">${meta.label}</div>
+        </div>
+      `;
+      card.addEventListener('click', () => {
+        subscriptionsStatusFilter.value = meta.key;
+        loadSubscriptions();
+      });
+      subscriptionsSummary.appendChild(card);
+    }
+  }
+
+  function renderSubscriptions(shops) {
+    subscriptionsGrid.innerHTML = '';
+    subscriptionsEmpty.hidden = shops.length > 0;
+    for (const shop of shops) {
+      subscriptionsGrid.appendChild(buildSubscriptionCard(shop));
+    }
+  }
+
+  function buildSubscriptionCard(shop) {
+    const card = document.createElement('div');
+    card.className = 'shop-card';
+
+    const header = document.createElement('div');
+    header.className = 'shop-card-header';
+    header.appendChild(shopCell(shop.shopName, shop.phoneNumber));
+    const status = shop.subscription.status;
+    header.appendChild(badge(status, status.charAt(0).toUpperCase() + status.slice(1)));
+    card.appendChild(header);
+
+    const saveOpts = { errorEl: subscriptionsError, onSaved: loadSubscriptions };
+    const fields = document.createElement('div');
+    fields.className = 'shop-card-fields';
+    fields.appendChild(field('Subscription', shopStatusSelect(shop, saveOpts)));
+    fields.appendChild(field('Plan', shopPlanSelect(shop, saveOpts)));
+    card.appendChild(fields);
+
+    const info = document.createElement('div');
+    info.className = 'shop-card-info';
+    const renewalLabel = document.createElement('span');
+    if (status === 'trial' && shop.subscription.trialEndsAt) {
+      renewalLabel.textContent = `Trial ends ${formatDate(shop.subscription.trialEndsAt)}`;
+    } else if (status === 'expired' && shop.subscription.expiredOn) {
+      renewalLabel.textContent = `Expired ${formatDate(shop.subscription.expiredOn)}`;
+    } else if (status === 'active') {
+      renewalLabel.textContent = 'Renews automatically';
+    } else {
+      renewalLabel.textContent = 'No active plan';
+    }
+    const paymentLabel = document.createElement('span');
+    paymentLabel.textContent = shop.subscription.paymentMethod || '—';
+    info.appendChild(renewalLabel);
+    info.appendChild(paymentLabel);
+    card.appendChild(info);
+
+    const footer = document.createElement('div');
+    footer.className = 'shop-card-footer';
+    const joined = document.createElement('span');
+    joined.className = 'shop-card-joined';
+    joined.textContent = `Joined ${formatDate(shop.createdAt)}`;
+    footer.appendChild(joined);
+    card.appendChild(footer);
+
+    return card;
   }
 
   // ---------- Devices ----------
