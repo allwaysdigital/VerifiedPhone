@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -18,50 +18,35 @@ import {
 } from '../components/SubscriptionIcons';
 import { PLANS, formatSubscriptionDate } from '../types/domain';
 import { useShopData } from '../context/ShopDataContext';
+import { listInvoices, type Invoice } from '../api/subscription';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ManageSubscription'>;
-
-// No billing-history endpoint exists yet — these rows are placeholder data
-// shaped like what the real invoice history will look like, so the layout
-// is ready once that's wired up.
-const MOCK_INVOICES = [
-  {
-    id: 'INV-2026-02-094',
-    label: 'Monthly Plan',
-    date: '25 Feb 2026',
-    method: 'UPI AutoPay',
-    amount: 199,
-    status: 'paid' as const,
-  },
-  {
-    id: 'INV-2026-01-081',
-    label: 'Monthly Plan',
-    date: '25 Jan 2026',
-    method: 'UPI AutoPay',
-    amount: 199,
-    status: 'paid' as const,
-  },
-  {
-    id: null,
-    label: 'Monthly Plan',
-    date: '25 Dec 2025',
-    method: 'Bank Declined',
-    amount: 199,
-    status: 'failed' as const,
-  },
-];
 
 export default function ManageSubscriptionScreen({ navigation }: Props) {
   useScreenStatusBar('light-content', colors.headerGradientStart);
   const { shop, subscription, cancelSubscription } = useShopData();
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(true);
+
+  useEffect(() => {
+    listInvoices()
+      .then(setInvoices)
+      .catch(() => setInvoices([]))
+      .finally(() => setInvoicesLoading(false));
+  }, []);
 
   const plan = subscription?.planId ? PLANS[subscription.planId] : null;
   const isTrial = subscription?.status === 'trial';
   const isActive = subscription?.status === 'active';
   const hasAccess = isTrial || isActive;
-  const renewDate = subscription?.trialEndsAt ? formatSubscriptionDate(subscription.trialEndsAt) : '—';
+  // Active subs renew on renewsOn (set by the Razorpay webhook on each
+  // charge); trials renew/expire on trialEndsAt — different fields because
+  // they're genuinely different billing mechanisms, not the same date
+  // under two names.
+  const renewSourceDate = isActive ? subscription?.renewsOn : subscription?.trialEndsAt;
+  const renewDate = renewSourceDate ? formatSubscriptionDate(renewSourceDate) : '—';
 
   const handleConfirmCancel = async () => {
     setCancelling(true);
@@ -168,56 +153,66 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.invoiceList}>
-          {MOCK_INVOICES.map((invoice, index) => (
-            <View key={`${invoice.label}-${index}`} style={styles.invoiceRow}>
-              <View style={styles.invoiceLeft}>
-                <View
-                  style={[
-                    styles.invoiceIconWrap,
-                    invoice.status === 'failed' && styles.invoiceIconWrapFailed,
-                  ]}>
-                  {invoice.status === 'paid' ? (
-                    <ReceiptCheckIcon size={18} />
-                  ) : (
-                    <XCircleIcon size={18} />
-                  )}
-                </View>
-                <View>
-                  <View style={styles.invoiceTitleRow}>
-                    <Text style={styles.invoiceLabel}>{invoice.label}</Text>
-                    <View
-                      style={[
-                        styles.invoiceStatusChip,
-                        invoice.status === 'failed' && styles.invoiceStatusChipFailed,
-                      ]}>
-                      <Text
-                        style={[
-                          styles.invoiceStatusChipText,
-                          invoice.status === 'failed' && styles.invoiceStatusChipTextFailed,
-                        ]}>
-                        {invoice.status === 'paid' ? 'Paid' : 'Failed'}
-                      </Text>
-                    </View>
+          {invoicesLoading ? (
+            <Text style={styles.invoiceEmptyText}>Loading billing history…</Text>
+          ) : invoices.length === 0 ? (
+            <Text style={styles.invoiceEmptyText}>No billing history yet.</Text>
+          ) : (
+            invoices.map(invoice => (
+              <View key={invoice.id} style={styles.invoiceRow}>
+                <View style={styles.invoiceLeft}>
+                  <View
+                    style={[
+                      styles.invoiceIconWrap,
+                      invoice.status === 'failed' && styles.invoiceIconWrapFailed,
+                    ]}>
+                    {invoice.status === 'paid' ? (
+                      <ReceiptCheckIcon size={18} />
+                    ) : (
+                      <XCircleIcon size={18} />
+                    )}
                   </View>
-                  <Text style={styles.invoiceMeta}>
-                    {invoice.date} · {invoice.method}
+                  <View>
+                    <View style={styles.invoiceTitleRow}>
+                      <Text style={styles.invoiceLabel}>{PLANS[invoice.planId].name}</Text>
+                      <View
+                        style={[
+                          styles.invoiceStatusChip,
+                          invoice.status === 'failed' && styles.invoiceStatusChipFailed,
+                        ]}>
+                        <Text
+                          style={[
+                            styles.invoiceStatusChipText,
+                            invoice.status === 'failed' && styles.invoiceStatusChipTextFailed,
+                          ]}>
+                          {invoice.status === 'paid' ? 'Paid' : 'Failed'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.invoiceMeta}>
+                      {formatSubscriptionDate(invoice.paidAt)} ·{' '}
+                      {invoice.status === 'paid'
+                        ? invoice.method || 'UPI AutoPay'
+                        : invoice.failureReason || 'Payment failed'}
+                    </Text>
+                    <Text style={styles.invoiceId}>{invoice.status === 'paid' ? invoice.id : 'No receipt'}</Text>
+                  </View>
+                </View>
+                <View style={styles.invoiceRight}>
+                  <Text
+                    style={[styles.invoiceAmount, invoice.status === 'failed' && styles.invoiceAmountFailed]}>
+                    ₹{invoice.amount}
                   </Text>
-                  <Text style={styles.invoiceId}>{invoice.id || 'No receipt'}</Text>
+                  {invoice.status === 'paid' ? (
+                    <TouchableOpacity style={styles.gstButton}>
+                      <DownloadIcon size={12} />
+                      <Text style={styles.gstButtonText}>GST</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               </View>
-              <View style={styles.invoiceRight}>
-                <Text style={[styles.invoiceAmount, invoice.status === 'failed' && styles.invoiceAmountFailed]}>
-                  ₹{invoice.amount}
-                </Text>
-                {invoice.status === 'paid' ? (
-                  <TouchableOpacity style={styles.gstButton}>
-                    <DownloadIcon size={12} />
-                    <Text style={styles.gstButtonText}>GST</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         <View style={styles.captionRow}>
@@ -463,6 +458,13 @@ const styles = StyleSheet.create({
   },
   invoiceList: {
     gap: 10,
+  },
+  invoiceEmptyText: {
+    fontFamily: fonts.robotoRegular,
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingVertical: 16,
   },
   invoiceRow: {
     flexDirection: 'row',

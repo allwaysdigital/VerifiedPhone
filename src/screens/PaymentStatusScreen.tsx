@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
@@ -7,6 +7,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { PLANS } from '../types/domain';
+import { getSubscription } from '../api/subscription';
 import SubscriptionHeader from '../components/SubscriptionHeader';
 import {
   ClockIcon,
@@ -93,6 +94,29 @@ function ActivatingContent({ navigation, route }: Props) {
   const { planId } = route.params;
   const plan = PLANS[planId];
   const [txnId] = useState(() => mockTxnId('DLR'));
+  const [checking, setChecking] = useState(false);
+
+  const handleRefreshStatus = async () => {
+    if (checking) {
+      return;
+    }
+    setChecking(true);
+    try {
+      const subscription = await getSubscription();
+      if (subscription.status === 'active') {
+        navigation.setParams({ status: 'success' });
+      } else {
+        Alert.alert(
+          'Still processing',
+          "Your payment hasn't been confirmed yet. This can take a few minutes for UPI AutoPay — try again shortly.",
+        );
+      }
+    } catch {
+      Alert.alert('Could not check status', 'Please try again.');
+    } finally {
+      setChecking(false);
+    }
+  };
 
   return (
     <View style={styles.centeredBody}>
@@ -156,10 +180,15 @@ function ActivatingContent({ navigation, route }: Props) {
       </View>
 
       <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => navigation.setParams({ status: 'success' })}
+        style={[styles.primaryButton, checking && styles.primaryButtonDisabled]}
+        onPress={handleRefreshStatus}
+        disabled={checking}
         activeOpacity={0.85}>
-        <Text style={styles.primaryButtonText}>Refresh Status</Text>
+        {checking ? (
+          <ActivityIndicator color={colors.white} />
+        ) : (
+          <Text style={styles.primaryButtonText}>Refresh Status</Text>
+        )}
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.secondaryButton}
@@ -235,7 +264,7 @@ function FailedContent({ navigation, route }: Props) {
 
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => navigation.setParams({ status: 'activating' })}
+        onPress={() => navigation.replace('SubscriptionPlans')}
         activeOpacity={0.85}>
         <UpiIcon size={14} color="#613b00" />
         <Text style={[styles.primaryButtonText, styles.primaryButtonTextDark]}>Try Again</Text>
@@ -416,6 +445,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     marginTop: 24,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.7,
   },
   primaryButtonText: {
     fontFamily: fonts.robotoBold,

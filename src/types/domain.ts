@@ -59,6 +59,7 @@ export type Subscription = {
   planId: PlanId | null;
   trialEndsAt: string | null;
   expiredOn: string | null;
+  renewsOn: string | null;
   paymentMethod: string;
 };
 

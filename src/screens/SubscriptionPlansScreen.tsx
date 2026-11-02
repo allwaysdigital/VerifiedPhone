@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import RazorpayCheckout from 'react-native-razorpay';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
 import { PLANS, type PlanId } from '../types/domain';
+import { createRazorpaySubscription, verifyRazorpayPayment } from '../api/subscription';
+import { getAuthErrorMessage } from '../auth/session';
 import SubscriptionHeader from '../components/SubscriptionHeader';
 import { AlertTriangleIcon, CheckCircleIcon, ShieldCheckIcon, UpiIcon } from '../components/SubscriptionIcons';
 
@@ -24,6 +27,7 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
   useScreenStatusBar('light-content', colors.headerGradientStart);
   const { shop } = useShopData();
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('yearly');
+  const [subscribing, setSubscribing] = useState(false);
 
   const entriesUsed = MOCK_ENTRIES_USED;
   const limitReached = entriesUsed >= FREE_ENTRY_LIMIT;
@@ -34,8 +38,47 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
   const yearlyMonthlyEquivalent = Math.round(yearly.price / 12);
   const yearlySavings = monthly.price * 12 - yearly.price;
 
-  const handleSubscribe = () => {
-    navigation.navigate('PaymentStatus', { status: 'activating', planId: selectedPlan });
+  const handleSubscribe = async () => {
+    if (subscribing) {
+      return;
+    }
+    setSubscribing(true);
+    try {
+      const { subscriptionId, razorpayKeyId } = await createRazorpaySubscription(selectedPlan);
+
+      const result = await RazorpayCheckout.open({
+        key: razorpayKeyId,
+        subscription_id: subscriptionId,
+        name: 'VerifiedPhone — Dealer Sathi',
+        description: `${PLANS[selectedPlan].name} subscription`,
+        theme: { color: colors.primary },
+        prefill: shop?.phoneNumber ? { contact: shop.phoneNumber } : undefined,
+      });
+
+      // The UPI mandate itself still needs to be confirmed asynchronously —
+      // this call only checks the signature on what Checkout just returned,
+      // it doesn't grant access. The webhook (subscription.activated/
+      // charged) is what actually flips the shop's status to "active",
+      // which is exactly why the next screen is "activating", not "success".
+      await verifyRazorpayPayment({
+        razorpay_payment_id: result.razorpay_payment_id,
+        razorpay_subscription_id: result.razorpay_subscription_id,
+        razorpay_signature: result.razorpay_signature,
+      });
+
+      navigation.navigate('PaymentStatus', { status: 'activating', planId: selectedPlan });
+    } catch (err: any) {
+      // RazorpayCheckout.open rejects with { code, description } when the
+      // user cancels or the payment fails — not an ApiError, so it needs
+      // its own message extraction rather than getAuthErrorMessage's.
+      if (err?.description || err?.code !== undefined) {
+        navigation.navigate('PaymentStatus', { status: 'failed', planId: selectedPlan });
+      } else {
+        Alert.alert('Could not start checkout', getAuthErrorMessage(err, 'Please try again.'));
+      }
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   return (
@@ -158,9 +201,19 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.subscribeButton} onPress={handleSubscribe} activeOpacity={0.85}>
-          <UpiIcon size={18} />
-          <Text style={styles.subscribeButtonText}>Subscribe with UPI AutoPay</Text>
+        <TouchableOpacity
+          style={[styles.subscribeButton, subscribing && styles.subscribeButtonDisabled]}
+          onPress={handleSubscribe}
+          disabled={subscribing}
+          activeOpacity={0.85}>
+          {subscribing ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <>
+              <UpiIcon size={18} />
+              <Text style={styles.subscribeButtonText}>Subscribe with UPI AutoPay</Text>
+            </>
+          )}
         </TouchableOpacity>
         <Text style={styles.disclaimer}>
           Auto-renews. Cancel anytime. No refunds for the current period.
@@ -428,6 +481,9 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 16,
     paddingVertical: 14,
+  },
+  subscribeButtonDisabled: {
+    opacity: 0.7,
   },
   subscribeButtonText: {
     fontFamily: fonts.robotoBold,
