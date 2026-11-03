@@ -33,8 +33,49 @@ function serializeSubscription(shop: InstanceType<typeof Shop>) {
   };
 }
 
+// Backstop for a missed or misconfigured webhook: when the app asks for
+// status and we still think the shop isn't active, ask Razorpay directly
+// and apply the same state changes the webhook would have.
+async function syncFromRazorpay(shop: InstanceType<typeof Shop>): Promise<void> {
+  const subId = shop.subscription?.razorpaySubscriptionId;
+  if (!subId || shop.subscription.status === 'active') {
+    return;
+  }
+  const razorpay = getRazorpayClient();
+  const sub = await razorpay.subscriptions.fetch(subId);
+  if (sub.status !== 'active') {
+    return;
+  }
+  const subEntity = {
+    id: sub.id,
+    plan_id: sub.plan_id,
+    current_end: sub.current_end ?? undefined,
+    status: sub.status,
+  };
+  await handleRazorpayWebhook({ event: 'subscription.activated', payload: { subscription: { entity: subEntity } } });
+
+  const invoices = await razorpay.invoices.all({ subscription_id: subId } as never);
+  const paymentId = invoices.items.find(i => i.status === 'paid')?.payment_id;
+  if (paymentId) {
+    const payment = await razorpay.payments.fetch(paymentId);
+    await handleRazorpayWebhook({
+      event: 'subscription.charged',
+      payload: {
+        subscription: { entity: subEntity },
+        payment: { entity: { id: payment.id, amount: Number(payment.amount), method: payment.method } },
+      },
+    });
+  }
+}
+
 export async function getSubscription(req: Request, res: Response) {
-  res.json(serializeSubscription(req.shop!));
+  try {
+    await syncFromRazorpay(req.shop!);
+  } catch (err) {
+    console.error('Razorpay status sync failed', err);
+  }
+  const shop = (await Shop.findById(req.shop!._id)) ?? req.shop!;
+  res.json(serializeSubscription(shop));
 }
 
 export async function startTrial(req: Request, res: Response) {
