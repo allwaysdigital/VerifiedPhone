@@ -34,7 +34,7 @@ const MOCK_ENTRIES_USED = 4;
 
 export default function SubscriptionPlansScreen({ navigation }: Props) {
   useScreenStatusBar('light-content', colors.headerGradientStart);
-  const { shop, refetchAll } = useShopData();
+  const { shop, subscription, refetchAll } = useShopData();
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('yearly');
   const [subscribing, setSubscribing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,31 +82,42 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
       // Razorpay's hosted subscription page, not the native SDK: the SDK's
       // checkout hides UPI AutoPay for our subscriptions while the hosted
       // page shows it. Custom Tabs also hands upi:// intents to UPI apps.
-      if (await InAppBrowser.isAvailable()) {
+      if (!(await InAppBrowser.isAvailable())) {
+        await Linking.openURL(shortUrl);
+        navigation.navigate('PaymentStatus', { status: 'activating', planId: selectedPlan, subscriptionId });
+        return;
+      }
+
+      // Close the payment page by itself once the server sees the payment.
+      // Android may pause this while the browser is in front, so the
+      // status screen below keeps checking after the page closes too.
+      let paid = false;
+      const poll = setInterval(async () => {
+        try {
+          if ((await getSubscription()).status === 'active') {
+            paid = true;
+            clearInterval(poll);
+            InAppBrowser.close();
+          }
+        } catch {
+          // Transient network errors: the next tick retries.
+        }
+      }, 4000);
+      try {
         await InAppBrowser.open(shortUrl, {
           toolbarColor: colors.primary,
           showTitle: true,
           enableUrlBarHiding: true,
         });
-      } else {
-        await Linking.openURL(shortUrl);
-        return;
+      } finally {
+        clearInterval(poll);
       }
 
-      // Closing the browser doesn't say whether they paid — only the
-      // webhook does, so ask rather than assume success or failure.
-      Alert.alert('Did you complete the payment?', undefined, [
-        { text: 'Not yet', style: 'cancel' },
-        {
-          text: 'Yes, check status',
-          onPress: () =>
-            navigation.navigate('PaymentStatus', {
-              status: 'activating',
-              planId: selectedPlan,
-              subscriptionId,
-            }),
-        },
-      ]);
+      navigation.navigate('PaymentStatus', {
+        status: paid ? 'success' : 'activating',
+        planId: selectedPlan,
+        subscriptionId,
+      });
     } catch (err) {
       Alert.alert('Could not start checkout', getAuthErrorMessage(err, 'Please try again.'));
     } finally {
@@ -225,6 +236,26 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
               </View>
             </View>
           </TouchableOpacity>
+
+          {subscription?.testPlanEnabled ? (
+            <TouchableOpacity
+              style={[styles.planCard, selectedPlan === 'weekly_test' && styles.planCardSelected]}
+              onPress={() => setSelectedPlan('weekly_test')}
+              activeOpacity={0.8}>
+              <View style={styles.planRow}>
+                <View style={[styles.radio, selectedPlan === 'weekly_test' && styles.radioSelected]}>
+                  {selectedPlan === 'weekly_test' ? <View style={styles.radioDot} /> : null}
+                </View>
+                <View style={styles.planInfo}>
+                  <Text style={styles.planName}>Test Plan · 1 week</Text>
+                  <View style={styles.planPriceRow}>
+                    <Text style={styles.planPrice}>₹{PLANS.weekly_test.price}</Text>
+                    <Text style={styles.planPriceSuffix}>/week · for payment verification</Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={styles.footNotePill}>

@@ -233,7 +233,7 @@
   const shopsEmpty = document.getElementById('shops-empty');
 
   const SUBSCRIPTION_STATUSES = ['none', 'trial', 'active', 'expired'];
-  const PLAN_IDS = ['monthly', 'yearly'];
+  const PLAN_IDS = ['monthly', 'yearly', 'weekly_test'];
 
   let shopsSearchTimer = null;
   shopsSearch.addEventListener('input', () => {

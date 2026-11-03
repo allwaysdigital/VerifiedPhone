@@ -9,7 +9,7 @@ const paymentSchema = new Schema(
     shopId: { type: Schema.Types.ObjectId, ref: 'Shop', required: true, index: true },
     razorpayPaymentId: { type: String, required: true, unique: true },
     razorpaySubscriptionId: { type: String, required: true, index: true },
-    planId: { type: String, enum: ['monthly', 'yearly'], required: true },
+    planId: { type: String, enum: ['monthly', 'yearly', 'weekly_test'], required: true },
     amount: { type: Number, required: true }, // in rupees, not paise
     currency: { type: String, default: 'INR' },
     status: { type: String, enum: ['paid', 'failed'], required: true },

@@ -61,7 +61,7 @@ export async function updateShop(req: Request, res: Response) {
   const { otpBypass, subscriptionStatus, subscriptionPlanId } = req.body as {
     otpBypass?: boolean;
     subscriptionStatus?: 'none' | 'trial' | 'active' | 'expired';
-    subscriptionPlanId?: 'monthly' | 'yearly' | null;
+    subscriptionPlanId?: 'monthly' | 'yearly' | 'weekly_test' | null;
   };
 
   const update: Record<string, unknown> = {};

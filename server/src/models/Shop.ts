@@ -1,6 +1,6 @@
 import { Schema, model, type InferSchemaType, type HydratedDocument } from 'mongoose';
 
-export type PlanId = 'monthly' | 'yearly';
+export type PlanId = 'monthly' | 'yearly' | 'weekly_test';
 export type SubscriptionStatus = 'none' | 'trial' | 'active' | 'expired';
 
 const subscriptionSchema = new Schema(
@@ -12,7 +12,7 @@ const subscriptionSchema = new Schema(
     },
     planId: {
       type: String,
-      enum: ['monthly', 'yearly', null],
+      enum: ['monthly', 'yearly', 'weekly_test', null],
       default: 'monthly',
     },
     trialEndsAt: { type: Date, default: null },
