@@ -47,6 +47,16 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
   // under two names.
   const renewSourceDate = isActive ? subscription?.renewsOn : subscription?.trialEndsAt;
   const renewDate = renewSourceDate ? formatSubscriptionDate(renewSourceDate) : '—';
+  // Active with no renewal date but an end date = mandate cancelled; access
+  // runs until the end of the period already paid for.
+  const isCancelled = isActive && !subscription?.renewsOn && !!subscription?.expiredOn;
+  const accessUntil = subscription?.expiredOn ? formatSubscriptionDate(subscription.expiredOn) : '—';
+  const price = subscription?.amount ?? plan?.price ?? 0;
+  const renewalText = isCancelled
+    ? `Cancelled · access until ${accessUntil}`
+    : hasAccess
+    ? `Renews on ${renewDate}${plan ? ` · ₹${price.toLocaleString('en-IN')}` : ''}`
+    : 'No upcoming renewal';
 
   const handleConfirmCancel = async () => {
     setCancelling(true);
@@ -86,7 +96,7 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
             </View>
             {plan ? (
               <View style={styles.priceWrap}>
-                <Text style={styles.priceValue}>₹{plan.price.toLocaleString('en-IN')}</Text>
+                <Text style={styles.priceValue}>₹{price.toLocaleString('en-IN')}</Text>
                 <Text style={styles.priceSuffix}>/ {plan.period}</Text>
               </View>
             ) : null}
@@ -98,10 +108,7 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
             </View>
             <View>
               <Text style={styles.renewalLabel}>Status & Renewal</Text>
-              <Text style={styles.renewalValue}>
-                {hasAccess ? `Renews on ${renewDate}` : 'No upcoming renewal'}
-                {plan ? ` · ₹${plan.price.toLocaleString('en-IN')}` : ''}
-              </Text>
+              <Text style={styles.renewalValue}>{renewalText}</Text>
             </View>
           </View>
 
@@ -131,11 +138,13 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
                   <Text style={styles.switchSavingsChipText}>Save 16% (₹1,999/yr)</Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cancelTextButton}
-                onPress={() => setCancelModalVisible(true)}>
-                <Text style={styles.cancelTextButtonText}>Cancel Subscription</Text>
-              </TouchableOpacity>
+              {isCancelled ? null : (
+                <TouchableOpacity
+                  style={styles.cancelTextButton}
+                  onPress={() => setCancelModalVisible(true)}>
+                  <Text style={styles.cancelTextButtonText}>Cancel Subscription</Text>
+                </TouchableOpacity>
+              )}
             </>
           ) : (
             <TouchableOpacity

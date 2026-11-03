@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { Shop } from '../models/Shop';
 import { fileToUrl } from '../upload/multerConfig';
+import { isTestPlanEnabled } from '../payments/razorpayClient';
 
 function serializeShop(shop: InstanceType<typeof Shop>) {
   return {
@@ -17,7 +18,10 @@ function serializeShop(shop: InstanceType<typeof Shop>) {
       planId: shop.subscription?.planId ?? null,
       trialEndsAt: shop.subscription?.trialEndsAt ?? null,
       expiredOn: shop.subscription?.expiredOn ?? null,
+      renewsOn: shop.subscription?.renewsOn ?? null,
       paymentMethod: shop.subscription?.paymentMethod ?? null,
+      amount: shop.subscription?.amount ?? null,
+      testPlanEnabled: isTestPlanEnabled(),
     },
   };
 }

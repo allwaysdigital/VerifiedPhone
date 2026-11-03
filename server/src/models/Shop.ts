@@ -24,6 +24,10 @@ const subscriptionSchema = new Schema(
     razorpaySubscriptionId: { type: String, default: null, index: true },
     razorpayCustomerId: { type: String, default: null },
     renewsOn: { type: Date, default: null },
+    // What Razorpay actually charges per cycle (₹), which can differ from
+    // the app's list price — e.g. a shop on a discounted or test plan.
+    amount: { type: Number, default: null },
+    razorpaySyncedAt: { type: Date, default: null },
   },
   { _id: false },
 );

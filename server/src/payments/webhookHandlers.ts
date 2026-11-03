@@ -86,6 +86,7 @@ export async function handleRazorpayWebhook(body: WebhookPayload): Promise<void>
       shop.subscription.expiredOn = null;
       shop.subscription.renewsOn = sub.current_end ? new Date(sub.current_end * 1000) : null;
       shop.subscription.paymentMethod = paymentMethodLabel(payment.method);
+      shop.subscription.amount = payment.amount / 100;
       await shop.save();
 
       await Payment.updateOne(
@@ -113,8 +114,16 @@ export async function handleRazorpayWebhook(body: WebhookPayload): Promise<void>
       if (!sub) return;
       const shop = await findShopBySubscriptionId(sub.id);
       if (!shop) return;
-      shop.subscription.status = 'expired';
-      shop.subscription.expiredOn = new Date();
+      // A cancelled mandate still covers the cycle already paid for, so
+      // keep access until current_end; getSubscription expires it after.
+      const paidUntil = sub.current_end ? new Date(sub.current_end * 1000) : null;
+      shop.subscription.renewsOn = null;
+      if (paidUntil && paidUntil.getTime() > Date.now()) {
+        shop.subscription.expiredOn = paidUntil;
+      } else {
+        shop.subscription.status = 'expired';
+        shop.subscription.expiredOn = paidUntil ?? new Date();
+      }
       await shop.save();
       break;
     }

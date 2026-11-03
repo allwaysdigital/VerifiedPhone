@@ -61,6 +61,7 @@ export type Subscription = {
   expiredOn: string | null;
   renewsOn: string | null;
   paymentMethod: string | null;
+  amount?: number | null;
   testPlanEnabled?: boolean;
 };
 
