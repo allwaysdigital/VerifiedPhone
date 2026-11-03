@@ -467,6 +467,10 @@
       renewalLabel.textContent = `Trial ends ${formatDate(shop.subscription.trialEndsAt)}`;
     } else if (status === 'expired' && shop.subscription.expiredOn) {
       renewalLabel.textContent = `Expired ${formatDate(shop.subscription.expiredOn)}`;
+    } else if (status === 'active' && shop.subscription.renewsOn) {
+      renewalLabel.textContent = `Renews ${formatDate(shop.subscription.renewsOn)}`;
+    } else if (status === 'active' && shop.subscription.expiredOn) {
+      renewalLabel.textContent = `Cancelled · access until ${formatDate(shop.subscription.expiredOn)}`;
     } else if (status === 'active') {
       renewalLabel.textContent = 'Renews automatically';
     } else {
@@ -567,6 +571,12 @@
     const rs = data.razorpaySubscription;
     subCard.appendChild(detailRow('Status in app', data.subscription.status));
     subCard.appendChild(detailRow('Plan', data.subscription.planId));
+    subCard.appendChild(detailRow('Amount per cycle', data.subscription.amount === null ? null : formatMoney(data.subscription.amount)));
+    if (data.subscription.renewsOn) {
+      subCard.appendChild(detailRow('Next renewal', formatDateTime(data.subscription.renewsOn)));
+    } else if (data.subscription.expiredOn) {
+      subCard.appendChild(detailRow('Access until', formatDateTime(data.subscription.expiredOn)));
+    }
     subCard.appendChild(detailRow('Razorpay subscription ID', data.subscription.razorpaySubscriptionId));
     if (rs) {
       subCard.appendChild(detailRow('Status in Razorpay', rs.status));

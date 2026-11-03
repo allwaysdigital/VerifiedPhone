@@ -31,43 +31,59 @@ function serializeSubscription(shop: InstanceType<typeof Shop>) {
     expiredOn: shop.subscription?.expiredOn ?? null,
     renewsOn: shop.subscription?.renewsOn ?? null,
     paymentMethod: shop.subscription?.paymentMethod ?? null,
+    amount: shop.subscription?.amount ?? null,
     testPlanEnabled: isTestPlanEnabled(),
   };
 }
 
-// Backstop for a missed or misconfigured webhook: when the app asks for
-// status and we still think the shop isn't active, ask Razorpay directly
-// and apply the same state changes the webhook would have.
+const RESYNC_ACTIVE_MS = 10 * 60 * 1000;
+const ENDED_STATUSES = new Set(['cancelled', 'completed', 'expired', 'halted']);
+
+// Backstop for a missed or misconfigured webhook: ask Razorpay directly and
+// apply the same state changes the webhook would have. Pending shops check
+// on every request; active ones at most every 10 minutes, to catch
+// cancellations (e.g. the customer revoking the mandate in their UPI app).
 async function syncFromRazorpay(shop: InstanceType<typeof Shop>): Promise<void> {
   const subId = shop.subscription?.razorpaySubscriptionId;
-  if (!subId || shop.subscription.status === 'active') {
+  if (!subId) {
     return;
   }
+  const isActive = shop.subscription.status === 'active';
+  const lastSynced = shop.subscription.razorpaySyncedAt?.getTime() ?? 0;
+  if (isActive && Date.now() - lastSynced < RESYNC_ACTIVE_MS) {
+    return;
+  }
+
   const razorpay = getRazorpayClient();
   const sub = await razorpay.subscriptions.fetch(subId);
-  if (sub.status !== 'active') {
-    return;
-  }
   const subEntity = {
     id: sub.id,
     plan_id: sub.plan_id,
     current_end: sub.current_end ?? undefined,
     status: sub.status,
   };
-  await handleRazorpayWebhook({ event: 'subscription.activated', payload: { subscription: { entity: subEntity } } });
 
-  const invoices = await razorpay.invoices.all({ subscription_id: subId } as never);
-  const paymentId = invoices.items.find(i => i.status === 'paid')?.payment_id;
-  if (paymentId) {
-    const payment = await razorpay.payments.fetch(paymentId);
-    await handleRazorpayWebhook({
-      event: 'subscription.charged',
-      payload: {
-        subscription: { entity: subEntity },
-        payment: { entity: { id: payment.id, amount: Number(payment.amount), method: payment.method } },
-      },
-    });
+  if (sub.status === 'active') {
+    if (!isActive) {
+      await handleRazorpayWebhook({ event: 'subscription.activated', payload: { subscription: { entity: subEntity } } });
+    }
+    const invoices = await razorpay.invoices.all({ subscription_id: subId } as never);
+    const paymentId = invoices.items.find(i => i.status === 'paid')?.payment_id;
+    if (paymentId) {
+      const payment = await razorpay.payments.fetch(paymentId);
+      await handleRazorpayWebhook({
+        event: 'subscription.charged',
+        payload: {
+          subscription: { entity: subEntity },
+          payment: { entity: { id: payment.id, amount: Number(payment.amount), method: payment.method } },
+        },
+      });
+    }
+  } else if (isActive && ENDED_STATUSES.has(sub.status)) {
+    await handleRazorpayWebhook({ event: 'subscription.cancelled', payload: { subscription: { entity: subEntity } } });
   }
+
+  await Shop.updateOne({ _id: shop._id }, { 'subscription.razorpaySyncedAt': new Date() });
 }
 
 export async function getSubscription(req: Request, res: Response) {
@@ -77,6 +93,12 @@ export async function getSubscription(req: Request, res: Response) {
     console.error('Razorpay status sync failed', err);
   }
   const shop = (await Shop.findById(req.shop!._id)) ?? req.shop!;
+  // A cancelled subscription keeps access until its paid period ends.
+  const sub = shop.subscription;
+  if (sub?.status === 'active' && !sub.renewsOn && sub.expiredOn && sub.expiredOn.getTime() <= Date.now()) {
+    sub.status = 'expired';
+    await shop.save();
+  }
   res.json(serializeSubscription(shop));
 }
 
