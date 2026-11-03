@@ -233,7 +233,7 @@
   const shopsEmpty = document.getElementById('shops-empty');
 
   const SUBSCRIPTION_STATUSES = ['none', 'trial', 'active', 'expired'];
-  const PLAN_IDS = ['monthly', 'yearly'];
+  const PLAN_IDS = ['monthly', 'yearly', 'weekly_test'];
 
   let shopsSearchTimer = null;
   shopsSearch.addEventListener('input', () => {
@@ -484,9 +484,138 @@
     joined.className = 'shop-card-joined';
     joined.textContent = `Joined ${formatDate(shop.createdAt)}`;
     footer.appendChild(joined);
+    const paymentsBtn = document.createElement('button');
+    paymentsBtn.className = 'secondary small';
+    paymentsBtn.textContent = 'View payments';
+    paymentsBtn.addEventListener('click', () => openPaymentsModal(shop));
+    footer.appendChild(paymentsBtn);
     card.appendChild(footer);
 
     return card;
+  }
+
+  // ---------- Payments modal ----------
+  function formatDateTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime())
+      ? '—'
+      : d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+  }
+
+  function detailRow(label, value) {
+    const row = el('div', 'detail-row');
+    row.appendChild(el('span', 'detail-label', label));
+    row.appendChild(el('span', 'detail-value', value === null || value === undefined || value === '' ? '—' : String(value)));
+    return row;
+  }
+
+  function closePaymentsModal() {
+    const existing = document.getElementById('payments-modal');
+    if (existing) existing.remove();
+    document.removeEventListener('keydown', onModalKeydown);
+  }
+
+  function onModalKeydown(e) {
+    if (e.key === 'Escape') closePaymentsModal();
+  }
+
+  async function openPaymentsModal(shop) {
+    closePaymentsModal();
+    const overlay = el('div', 'modal-overlay');
+    overlay.id = 'payments-modal';
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closePaymentsModal();
+    });
+    const modal = el('div', 'modal');
+    const head = el('div', 'modal-head');
+    const titleWrap = el('div');
+    titleWrap.appendChild(el('h2', 'modal-title', `Payments · ${shop.shopName || 'Shop'}`));
+    titleWrap.appendChild(el('div', 'modal-subtitle', shop.phoneNumber || ''));
+    head.appendChild(titleWrap);
+    const closeBtn = el('button', 'secondary small', 'Close');
+    closeBtn.addEventListener('click', closePaymentsModal);
+    head.appendChild(closeBtn);
+    modal.appendChild(head);
+    const body = el('div', 'modal-body');
+    body.appendChild(el('p', 'muted', 'Loading payment details from Razorpay…'));
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    document.addEventListener('keydown', onModalKeydown);
+
+    try {
+      const data = await api(`/api/admin/shops/${encodeURIComponent(shop.id)}/payments`);
+      body.replaceChildren(renderPaymentsBody(data));
+    } catch (err) {
+      body.replaceChildren(el('p', 'error', err.message));
+    }
+  }
+
+  function renderPaymentsBody(data) {
+    const wrap = el('div');
+
+    const subCard = el('div', 'detail-card');
+    subCard.appendChild(el('h3', 'detail-card-title', 'Subscription'));
+    const rs = data.razorpaySubscription;
+    subCard.appendChild(detailRow('Status in app', data.subscription.status));
+    subCard.appendChild(detailRow('Plan', data.subscription.planId));
+    subCard.appendChild(detailRow('Razorpay subscription ID', data.subscription.razorpaySubscriptionId));
+    if (rs) {
+      subCard.appendChild(detailRow('Status in Razorpay', rs.status));
+      subCard.appendChild(detailRow('Razorpay plan ID', rs.planId));
+      subCard.appendChild(detailRow('Payment method', rs.paymentMethod));
+      subCard.appendChild(detailRow('Cycles paid', `${rs.paidCount ?? 0} of ${rs.totalCount ?? '—'}`));
+      subCard.appendChild(detailRow('Current period ends', formatDateTime(rs.currentEnd)));
+      subCard.appendChild(detailRow('Mandate ends', formatDateTime(rs.endAt)));
+    }
+    wrap.appendChild(subCard);
+
+    wrap.appendChild(el('h3', 'detail-section-title', `Transactions (${data.payments.length})`));
+    if (data.payments.length === 0) {
+      wrap.appendChild(el('p', 'muted', 'No payments recorded for this shop yet.'));
+      return wrap;
+    }
+
+    for (const p of data.payments) {
+      const rp = p.razorpay || {};
+      const card = el('div', 'detail-card');
+      const top = el('div', 'detail-card-top');
+      top.appendChild(el('span', 'detail-amount', formatMoney(p.amount)));
+      const ok = (rp.status || p.status) === 'captured' || p.status === 'paid';
+      top.appendChild(badge(ok ? 'active' : 'expired', rp.status || p.status || 'unknown'));
+      card.appendChild(top);
+      card.appendChild(detailRow('Date & time', formatDateTime(p.paidAt)));
+      card.appendChild(detailRow('Razorpay payment ID', p.razorpayPaymentId));
+      card.appendChild(detailRow('Subscription ID', p.razorpaySubscriptionId));
+      card.appendChild(detailRow('Plan', p.planId));
+      card.appendChild(detailRow('Method', rp.method || p.method));
+      if (rp.vpa) card.appendChild(detailRow('UPI ID', rp.vpa));
+      if (rp.card) card.appendChild(detailRow('Card', rp.card));
+      if (rp.bank) card.appendChild(detailRow('Bank', rp.bank));
+      if (rp.wallet) card.appendChild(detailRow('Wallet', rp.wallet));
+      card.appendChild(detailRow('UPI / bank reference (RRN)', rp.bankReference));
+      if (rp.upiTransactionId) card.appendChild(detailRow('Razorpay UPI transaction ID', rp.upiTransactionId));
+      card.appendChild(detailRow('Customer contact', rp.contact));
+      card.appendChild(detailRow('Customer email', rp.email));
+      card.appendChild(detailRow('Razorpay fee', rp.fee === null || rp.fee === undefined ? null : formatMoney(rp.fee)));
+      card.appendChild(detailRow('GST on fee', rp.tax === null || rp.tax === undefined ? null : formatMoney(rp.tax)));
+      if (p.failureReason || rp.errorDescription) {
+        card.appendChild(detailRow('Failure reason', p.failureReason || rp.errorDescription));
+      }
+      if (!p.recorded) {
+        card.appendChild(el('p', 'muted small-note', 'Found in Razorpay but not yet recorded in our database.'));
+      }
+      wrap.appendChild(card);
+    }
+    return wrap;
   }
 
   // ---------- Devices ----------

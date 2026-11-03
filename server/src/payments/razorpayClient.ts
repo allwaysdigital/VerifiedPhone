@@ -33,8 +33,27 @@ export function getRazorpayClient(): Razorpay {
 // referenced here by ID — mirrors how the 2Factor OTP template works
 // (see auth/twoFactor.ts): the provider-side object is set up out of band,
 // we just hold the ID that points at it.
+const PLAN_ENV_KEYS: Record<PlanId, string> = {
+  monthly: 'RAZORPAY_PLAN_MONTHLY',
+  yearly: 'RAZORPAY_PLAN_YEARLY',
+  weekly_test: 'RAZORPAY_PLAN_TEST',
+};
+
+// The ₹1 weekly test plan is offered only while RAZORPAY_PLAN_TEST is set,
+// so removing that env var on Render hides it from every shop.
+export function isTestPlanEnabled(): boolean {
+  return Boolean(process.env.RAZORPAY_PLAN_TEST);
+}
+
+export function planIdFromRazorpayPlan(razorpayPlanId: string | undefined): PlanId {
+  const match = (Object.keys(PLAN_ENV_KEYS) as PlanId[]).find(
+    id => razorpayPlanId && process.env[PLAN_ENV_KEYS[id]] === razorpayPlanId,
+  );
+  return match ?? 'monthly';
+}
+
 export function razorpayPlanId(planId: PlanId): string {
-  const key = planId === 'yearly' ? 'RAZORPAY_PLAN_YEARLY' : 'RAZORPAY_PLAN_MONTHLY';
+  const key = PLAN_ENV_KEYS[planId];
   const id = process.env[key];
   if (!id) {
     throw new Error(`${key} is not set (see .env.example)`);

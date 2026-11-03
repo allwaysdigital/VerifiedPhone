@@ -1,5 +1,6 @@
 import crypto from 'crypto';
-import { Shop, type PlanId } from '../models/Shop';
+import { Shop } from '../models/Shop';
+import { planIdFromRazorpayPlan } from './razorpayClient';
 import { Payment } from '../models/Payment';
 
 export function verifyWebhookSignature(rawBody: Buffer, signature: string | undefined): boolean {
@@ -30,9 +31,6 @@ function paymentMethodLabel(method: string | undefined): string | null {
   }
 }
 
-function planIdFromRazorpayPlan(razorpayPlanId: string | undefined): PlanId {
-  return razorpayPlanId === process.env.RAZORPAY_PLAN_YEARLY ? 'yearly' : 'monthly';
-}
 
 type RazorpaySubscriptionEntity = {
   id: string;

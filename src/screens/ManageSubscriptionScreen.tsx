@@ -81,13 +81,13 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
                 </View>
               </View>
               <Text style={styles.planHeading}>
-                {plan ? `${isActive ? 'Active' : 'Trial'} ${plan.id === 'yearly' ? 'yearly' : 'monthly'}` : 'No plan selected'}
+                {plan ? `${isActive ? 'Active' : 'Trial'} · ${plan.tierName}` : 'No plan selected'}
               </Text>
             </View>
             {plan ? (
               <View style={styles.priceWrap}>
                 <Text style={styles.priceValue}>₹{plan.price.toLocaleString('en-IN')}</Text>
-                <Text style={styles.priceSuffix}>/ {plan.id === 'yearly' ? 'year' : 'month'}</Text>
+                <Text style={styles.priceSuffix}>/ {plan.period}</Text>
               </View>
             ) : null}
           </View>

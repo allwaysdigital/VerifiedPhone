@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import crypto from 'crypto';
 import { Shop, type PlanId } from '../models/Shop';
 import { Payment } from '../models/Payment';
-import { getRazorpayClient, razorpayPlanId } from '../payments/razorpayClient';
+import { getRazorpayClient, isTestPlanEnabled, razorpayPlanId } from '../payments/razorpayClient';
 import { handleRazorpayWebhook, verifyWebhookSignature } from '../payments/webhookHandlers';
 
 const TRIAL_DAYS = 30;
@@ -14,6 +14,7 @@ const TRIAL_DAYS = 30;
 const EFFECTIVELY_FOREVER_CYCLES: Record<PlanId, number> = {
   monthly: 120,
   yearly: 10,
+  weekly_test: 52,
 };
 
 function addDays(date: Date, days: number): Date {
@@ -30,6 +31,7 @@ function serializeSubscription(shop: InstanceType<typeof Shop>) {
     expiredOn: shop.subscription?.expiredOn ?? null,
     renewsOn: shop.subscription?.renewsOn ?? null,
     paymentMethod: shop.subscription?.paymentMethod ?? null,
+    testPlanEnabled: isTestPlanEnabled(),
   };
 }
 
@@ -131,7 +133,8 @@ export async function cancelSubscription(req: Request, res: Response) {
 // "created" state until the customer actually completes the UPI mandate.
 export async function createRazorpaySubscription(req: Request, res: Response) {
   const { planId } = req.body as { planId?: PlanId };
-  if (planId !== 'monthly' && planId !== 'yearly') {
+  const allowed = planId === 'monthly' || planId === 'yearly' || (planId === 'weekly_test' && isTestPlanEnabled());
+  if (!planId || !allowed) {
     res.status(400).json({ error: 'planId must be "monthly" or "yearly"' });
     return;
   }

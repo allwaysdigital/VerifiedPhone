@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import { Shop } from '../models/Shop';
 import { Device } from '../models/Device';
 import { Brand } from '../models/Brand';
+import { Payment } from '../models/Payment';
+import { getRazorpayClient } from '../payments/razorpayClient';
 import { signAdminToken } from '../auth/adminToken';
 
 function serializeShopForAdmin(shop: InstanceType<typeof Shop>) {
@@ -61,7 +63,7 @@ export async function updateShop(req: Request, res: Response) {
   const { otpBypass, subscriptionStatus, subscriptionPlanId } = req.body as {
     otpBypass?: boolean;
     subscriptionStatus?: 'none' | 'trial' | 'active' | 'expired';
-    subscriptionPlanId?: 'monthly' | 'yearly' | null;
+    subscriptionPlanId?: 'monthly' | 'yearly' | 'weekly_test' | null;
   };
 
   const update: Record<string, unknown> = {};
@@ -131,6 +133,149 @@ export async function listSubscriptionsAdmin(req: Request, res: Response) {
   res.json({
     shops: shops.map(serializeSubscriptionForAdmin),
     summary,
+  });
+}
+
+type RazorpayPaymentDetails = {
+  id: string;
+  amount: number | string;
+  currency?: string;
+  status?: string;
+  method?: string;
+  vpa?: string | null;
+  bank?: string | null;
+  wallet?: string | null;
+  email?: string | null;
+  contact?: string | number | null;
+  fee?: number | null;
+  tax?: number | null;
+  error_description?: string | null;
+  created_at?: number;
+  card?: { last4?: string; network?: string } | null;
+  acquirer_data?: { rrn?: string; upi_transaction_id?: string; bank_transaction_id?: string } | null;
+};
+
+function serializeRazorpayPayment(p: RazorpayPaymentDetails) {
+  return {
+    status: p.status ?? null,
+    method: p.method ?? null,
+    vpa: p.vpa ?? null,
+    bank: p.bank ?? null,
+    wallet: p.wallet ?? null,
+    card: p.card?.last4 ? `${p.card.network ?? 'Card'} •••• ${p.card.last4}` : null,
+    email: p.email ?? null,
+    contact: p.contact ? String(p.contact) : null,
+    bankReference: p.acquirer_data?.rrn ?? p.acquirer_data?.bank_transaction_id ?? null,
+    upiTransactionId: p.acquirer_data?.upi_transaction_id ?? null,
+    fee: typeof p.fee === 'number' ? p.fee / 100 : null,
+    tax: typeof p.tax === 'number' ? p.tax / 100 : null,
+    errorDescription: p.error_description ?? null,
+    createdAt: p.created_at ? new Date(p.created_at * 1000) : null,
+  };
+}
+
+// Our Payment rows only hold what the webhook/sync recorded; the bank
+// reference, UPI ID, fee etc. live in Razorpay, so they're fetched live.
+export async function listShopPaymentsAdmin(req: Request, res: Response) {
+  const shop = await Shop.findById(req.params.id);
+  if (!shop) {
+    res.status(404).json({ error: 'Shop not found.' });
+    return;
+  }
+
+  const rows = await Payment.find({ shopId: shop._id }).sort({ paidAt: -1 }).limit(25);
+  const subId = shop.subscription?.razorpaySubscriptionId ?? null;
+
+  let razorpay: ReturnType<typeof getRazorpayClient> | null = null;
+  try {
+    razorpay = getRazorpayClient();
+  } catch {
+    razorpay = null;
+  }
+
+  let razorpaySubscription: Record<string, unknown> | null = null;
+  const paymentIds = new Set(rows.map(r => r.razorpayPaymentId));
+  const extraPaymentIds: string[] = [];
+  if (razorpay && subId) {
+    try {
+      const sub = await razorpay.subscriptions.fetch(subId);
+      razorpaySubscription = {
+        id: sub.id,
+        planId: sub.plan_id,
+        status: sub.status,
+        paidCount: sub.paid_count,
+        totalCount: sub.total_count,
+        paymentMethod: sub.payment_method ?? null,
+        currentEnd: sub.current_end ? new Date(sub.current_end * 1000) : null,
+        endAt: sub.end_at ? new Date(sub.end_at * 1000) : null,
+      };
+      const invoices = await razorpay.invoices.all({ subscription_id: subId } as never);
+      for (const inv of invoices.items) {
+        if (inv.payment_id && !paymentIds.has(inv.payment_id)) {
+          extraPaymentIds.push(inv.payment_id);
+        }
+      }
+    } catch (err) {
+      console.error('Admin payments: Razorpay subscription fetch failed', err);
+    }
+  }
+
+  const baseRows = [
+    ...rows.map(r => ({
+      razorpayPaymentId: r.razorpayPaymentId,
+      razorpaySubscriptionId: r.razorpaySubscriptionId,
+      planId: r.planId,
+      amount: r.amount,
+      currency: r.currency,
+      status: r.status,
+      method: r.method,
+      failureReason: r.failureReason,
+      paidAt: r.paidAt,
+      recorded: true,
+    })),
+    ...extraPaymentIds.map(id => ({
+      razorpayPaymentId: id,
+      razorpaySubscriptionId: subId,
+      planId: shop.subscription?.planId ?? null,
+      amount: null as number | null,
+      currency: 'INR',
+      status: null as string | null,
+      method: null as string | null,
+      failureReason: null as string | null,
+      paidAt: null as Date | null,
+      recorded: false,
+    })),
+  ];
+
+  const payments = await Promise.all(
+    baseRows.map(async row => {
+      let details: ReturnType<typeof serializeRazorpayPayment> | null = null;
+      if (razorpay) {
+        try {
+          const p = (await razorpay.payments.fetch(row.razorpayPaymentId)) as unknown as RazorpayPaymentDetails;
+          details = serializeRazorpayPayment(p);
+          if (row.amount === null) {
+            row.amount = Number(p.amount) / 100;
+          }
+        } catch (err) {
+          console.error('Admin payments: Razorpay payment fetch failed', row.razorpayPaymentId, err);
+        }
+      }
+      return { ...row, paidAt: row.paidAt ?? details?.createdAt ?? null, razorpay: details };
+    }),
+  );
+
+  res.json({
+    shop: { id: shop._id.toString(), shopName: shop.shopName, phoneNumber: shop.phoneNumber },
+    subscription: {
+      status: shop.subscription?.status ?? 'trial',
+      planId: shop.subscription?.planId ?? null,
+      renewsOn: shop.subscription?.renewsOn ?? null,
+      paymentMethod: shop.subscription?.paymentMethod ?? null,
+      razorpaySubscriptionId: subId,
+    },
+    razorpaySubscription,
+    payments,
   });
 }
 

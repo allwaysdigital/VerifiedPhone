@@ -8,6 +8,7 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { PLANS } from '../types/domain';
 import { getSubscription, listInvoices, type Invoice } from '../api/subscription';
+import { useShopData } from '../context/ShopDataContext';
 import SubscriptionHeader from '../components/SubscriptionHeader';
 import {
   ClockIcon,
@@ -22,25 +23,20 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PaymentStatus'>;
 function SuccessContent({ navigation, route }: Props) {
   const { planId } = route.params;
   const plan = PLANS[planId];
+  const { refetchAll } = useShopData();
   const [latestPayment, setLatestPayment] = useState<Invoice | null>(null);
 
   useEffect(() => {
+    refetchAll().catch(() => {});
     listInvoices()
       .then(invoices => setLatestPayment(invoices.find(i => i.status === 'paid') ?? null))
       .catch(() => {});
-  }, []);
-  const renewLabel =
-    planId === 'yearly'
-      ? new Date(Date.now() + 365 * 86400000).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        })
-      : new Date(Date.now() + 30 * 86400000).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        });
+  }, [refetchAll]);
+  const renewLabel = new Date(Date.now() + plan.periodDays * 86400000).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 
   return (
     <View style={styles.centeredBody}>
@@ -64,7 +60,7 @@ function SuccessContent({ navigation, route }: Props) {
       <View style={styles.summaryCard}>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Plan Type</Text>
-          <Text style={styles.summaryValueBold}>Dealer Pro {planId === 'yearly' ? 'Annual' : 'Monthly'}</Text>
+          <Text style={styles.summaryValueBold}>{plan.tierName}</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryRow}>
@@ -99,6 +95,33 @@ function ActivatingContent({ navigation, route }: Props) {
   const { planId, subscriptionId } = route.params;
   const plan = PLANS[planId];
   const [checking, setChecking] = useState(false);
+
+  // UPI AutoPay confirmation lands a few seconds to a few minutes after the
+  // customer pays, so keep checking quietly instead of making them tap.
+  useEffect(() => {
+    let cancelled = false;
+    let attempts = 0;
+    const timer = setInterval(async () => {
+      attempts += 1;
+      if (attempts > 60) {
+        clearInterval(timer);
+        return;
+      }
+      try {
+        const subscription = await getSubscription();
+        if (!cancelled && subscription.status === 'active') {
+          clearInterval(timer);
+          navigation.setParams({ status: 'success' });
+        }
+      } catch {
+        // Transient network errors: the next tick retries.
+      }
+    }, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [navigation]);
 
   const handleRefreshStatus = async () => {
     if (checking) {
@@ -158,12 +181,12 @@ function ActivatingContent({ navigation, route }: Props) {
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Selected Plan</Text>
-          <Text style={styles.summaryValueBold}>Dealer Pro {planId === 'yearly' ? 'Annual' : 'Monthly'}</Text>
+          <Text style={styles.summaryValueBold}>{plan.tierName}</Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Billing Amount</Text>
           <Text style={styles.summaryValueBold}>
-            ₹{plan.price.toLocaleString('en-IN')} / {planId === 'yearly' ? 'year' : 'month'}
+            ₹{plan.price.toLocaleString('en-IN')} / {plan.period}
           </Text>
         </View>
         <View style={styles.summaryRow}>
@@ -246,7 +269,7 @@ function FailedContent({ navigation, route }: Props) {
         <View style={styles.summaryRow}>
           <View>
             <Text style={styles.summaryLabel}>Attempted Plan</Text>
-            <Text style={styles.attemptedPlanValue}>Dealer Pro {planId === 'yearly' ? 'Annual' : 'Monthly'}</Text>
+            <Text style={styles.attemptedPlanValue}>{plan.tierName}</Text>
           </View>
           <Text style={styles.attemptedPlanPrice}>₹{plan.price.toLocaleString('en-IN')}</Text>
         </View>

@@ -51,7 +51,7 @@ export type Brand = {
   name: string;
 };
 
-export type PlanId = 'monthly' | 'yearly';
+export type PlanId = 'monthly' | 'yearly' | 'weekly_test';
 export type SubscriptionStatus = 'none' | 'trial' | 'active' | 'expired';
 
 export type Subscription = {
@@ -61,11 +61,15 @@ export type Subscription = {
   expiredOn: string | null;
   renewsOn: string | null;
   paymentMethod: string | null;
+  testPlanEnabled?: boolean;
 };
 
 export type PlanDefinition = {
   id: PlanId;
   name: string;
+  tierName: string;
+  period: 'week' | 'month' | 'year';
+  periodDays: number;
   price: number;
   billingSuffix: string;
   cardDescription: string;
@@ -77,6 +81,9 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   monthly: {
     id: 'monthly',
     name: 'Monthly Plan',
+    tierName: 'Dealer Pro Monthly',
+    period: 'month',
+    periodDays: 30,
     price: 199,
     billingSuffix: 'Per month',
     cardDescription: 'Flexible monthly subscription',
@@ -85,11 +92,25 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   yearly: {
     id: 'yearly',
     name: 'Yearly Plan',
+    tierName: 'Dealer Pro Annual',
+    period: 'year',
+    periodDays: 365,
     price: 1999,
     billingSuffix: 'Per year',
     cardDescription: 'Best value for 12 months',
     tagline: 'long-term savings',
     badge: 'SAVE 17%',
+  },
+  weekly_test: {
+    id: 'weekly_test',
+    name: 'Test Plan',
+    tierName: 'Dealer Pro Test (1 week)',
+    period: 'week',
+    periodDays: 7,
+    price: 1,
+    billingSuffix: 'Per week',
+    cardDescription: 'For payment verification only',
+    tagline: 'payment verification',
   },
 };
 
