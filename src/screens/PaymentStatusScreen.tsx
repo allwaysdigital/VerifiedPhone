@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,7 +7,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { PLANS } from '../types/domain';
-import { getSubscription } from '../api/subscription';
+import { getSubscription, listInvoices, type Invoice } from '../api/subscription';
 import SubscriptionHeader from '../components/SubscriptionHeader';
 import {
   ClockIcon,
@@ -19,13 +19,16 @@ import {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PaymentStatus'>;
 
-function mockTxnId(prefix: string): string {
-  return `${prefix}-${Math.floor(100000000 + Math.random() * 899999999)}`;
-}
-
 function SuccessContent({ navigation, route }: Props) {
   const { planId } = route.params;
   const plan = PLANS[planId];
+  const [latestPayment, setLatestPayment] = useState<Invoice | null>(null);
+
+  useEffect(() => {
+    listInvoices()
+      .then(invoices => setLatestPayment(invoices.find(i => i.status === 'paid') ?? null))
+      .catch(() => {});
+  }, []);
   const renewLabel =
     planId === 'yearly'
       ? new Date(Date.now() + 365 * 86400000).toLocaleDateString('en-GB', {
@@ -38,7 +41,6 @@ function SuccessContent({ navigation, route }: Props) {
           month: 'short',
           year: 'numeric',
         });
-  const [txnId] = useState(() => mockTxnId('MH-TXN'));
 
   return (
     <View style={styles.centeredBody}>
@@ -68,13 +70,16 @@ function SuccessContent({ navigation, route }: Props) {
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Amount Paid</Text>
           <Text style={styles.summaryValueBold}>
-            ₹{plan.price.toLocaleString('en-IN')} <Text style={styles.summaryValueMuted}>(inclusive GST)</Text>
+            ₹{(latestPayment?.amount ?? plan.price).toLocaleString('en-IN')}{' '}
+            <Text style={styles.summaryValueMuted}>(inclusive GST)</Text>
           </Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Transaction ID</Text>
-          <Text style={styles.summaryValueMono}>{txnId}</Text>
+          <Text style={styles.summaryValueMono}>
+            {latestPayment?.id ?? route.params.subscriptionId ?? '—'}
+          </Text>
         </View>
       </View>
 
@@ -91,9 +96,8 @@ function SuccessContent({ navigation, route }: Props) {
 }
 
 function ActivatingContent({ navigation, route }: Props) {
-  const { planId } = route.params;
+  const { planId, subscriptionId } = route.params;
   const plan = PLANS[planId];
-  const [txnId] = useState(() => mockTxnId('DLR'));
   const [checking, setChecking] = useState(false);
 
   const handleRefreshStatus = async () => {
@@ -170,13 +174,15 @@ function ActivatingContent({ navigation, route }: Props) {
           <Text style={styles.summaryLabel}>Network Status</Text>
           <Text style={styles.summaryValueAmber}>Confirming with bank</Text>
         </View>
-        <View style={styles.txnRow}>
-          <Text style={styles.txnText}>TXN: {txnId}</Text>
-          <TouchableOpacity style={styles.copyButton}>
-            <Text style={styles.copyButtonText}>Copy</Text>
-            <CopyIcon size={11} color="#855300" />
-          </TouchableOpacity>
-        </View>
+        {subscriptionId ? (
+          <View style={styles.txnRow}>
+            <Text style={styles.txnText}>Ref: {subscriptionId}</Text>
+            <TouchableOpacity style={styles.copyButton}>
+              <Text style={styles.copyButtonText}>Copy</Text>
+              <CopyIcon size={11} color="#855300" />
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
 
       <TouchableOpacity
@@ -208,9 +214,8 @@ function ActivatingContent({ navigation, route }: Props) {
 }
 
 function FailedContent({ navigation, route }: Props) {
-  const { planId } = route.params;
+  const { planId, subscriptionId } = route.params;
   const plan = PLANS[planId];
-  const [txnId] = useState(() => mockTxnId('MH-TXN'));
 
   return (
     <View style={styles.centeredBody}>
@@ -250,16 +255,20 @@ function FailedContent({ navigation, route }: Props) {
           <Text style={styles.summaryLabel}>Failure Reason</Text>
           <Text style={styles.failureReasonText}>Bank transaction timeout or payment declined</Text>
         </View>
-        <View style={styles.summaryDivider} />
-        <View style={styles.txnRefRow}>
-          <View>
-            <Text style={styles.summaryLabel}>Transaction Ref</Text>
-            <Text style={styles.summaryValueMono}>{txnId}-F</Text>
-          </View>
-          <TouchableOpacity style={styles.copyIconButton}>
-            <CopyIcon size={14} color="#475569" />
-          </TouchableOpacity>
-        </View>
+        {subscriptionId ? (
+          <>
+            <View style={styles.summaryDivider} />
+            <View style={styles.txnRefRow}>
+              <View>
+                <Text style={styles.summaryLabel}>Reference</Text>
+                <Text style={styles.summaryValueMono}>{subscriptionId}</Text>
+              </View>
+              <TouchableOpacity style={styles.copyIconButton}>
+                <CopyIcon size={14} color="#475569" />
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : null}
       </View>
 
       <TouchableOpacity

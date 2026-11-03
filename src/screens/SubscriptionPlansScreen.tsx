@@ -77,7 +77,7 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
     }
     setSubscribing(true);
     try {
-      const { shortUrl } = await createRazorpaySubscription(selectedPlan);
+      const { shortUrl, subscriptionId } = await createRazorpaySubscription(selectedPlan);
 
       // Razorpay's hosted subscription page, not the native SDK: the SDK's
       // checkout hides UPI AutoPay for our subscriptions while the hosted
@@ -100,7 +100,11 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
         {
           text: 'Yes, check status',
           onPress: () =>
-            navigation.navigate('PaymentStatus', { status: 'activating', planId: selectedPlan }),
+            navigation.navigate('PaymentStatus', {
+              status: 'activating',
+              planId: selectedPlan,
+              subscriptionId,
+            }),
         },
       ]);
     } catch (err) {
