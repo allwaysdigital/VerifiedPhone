@@ -19,6 +19,7 @@ export async function cancelSubscription(): Promise<Subscription> {
 export type RazorpayCreateResponse = {
   subscriptionId: string;
   razorpayKeyId: string;
+  shortUrl: string;
 };
 
 export async function createRazorpaySubscription(planId: PlanId): Promise<RazorpayCreateResponse> {

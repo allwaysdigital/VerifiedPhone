@@ -7,13 +7,13 @@ import { handleRazorpayWebhook, verifyWebhookSignature } from '../payments/webho
 
 const TRIAL_DAYS = 30;
 
-// Razorpay subscriptions bill for a fixed number of cycles, not forever —
-// there's no "until cancelled" option. 1200 monthly cycles is 100 years,
-// which is the standard workaround for "effectively indefinite" used across
-// Razorpay integrations; yearly plans get the equivalent in years.
+// Razorpay subscriptions bill for a fixed number of cycles — there's no
+// "until cancelled" option. Keep the total span at 10 years: a longer end
+// date (e.g. 100 years) makes Razorpay hide UPI AutoPay at checkout, since
+// UPI mandates can't run that long; only cards/eMandate remain.
 const EFFECTIVELY_FOREVER_CYCLES: Record<PlanId, number> = {
-  monthly: 1200,
-  yearly: 100,
+  monthly: 120,
+  yearly: 10,
 };
 
 function addDays(date: Date, days: number): Date {
@@ -52,7 +52,7 @@ export async function startTrial(req: Request, res: Response) {
         planId,
         trialEndsAt: addDays(new Date(), TRIAL_DAYS),
         expiredOn: null,
-        paymentMethod: req.shop!.subscription?.paymentMethod ?? 'UPI (ending 1234)',
+        paymentMethod: req.shop!.subscription?.paymentMethod ?? null,
       },
     },
     { new: true },
@@ -98,34 +98,23 @@ export async function createRazorpaySubscription(req: Request, res: Response) {
   const razorpay = getRazorpayClient();
   const shop = req.shop!;
 
-  let customerId = shop.subscription?.razorpayCustomerId ?? null;
-  if (!customerId) {
-    const customer = await razorpay.customers.create({
-      name: shop.shopName || 'VerifiedPhone Dealer',
-      contact: (shop.phoneNumber ?? '').replace(/^\+/, ''),
-      fail_existing: 0,
-    });
-    customerId = customer.id;
-  }
-
-  // customer_id is a real, documented Razorpay API field for binding a
-  // subscription to an existing customer — it's just missing from this
-  // package's own .d.ts, hence the cast.
+  // No customer_id: binding one makes Razorpay's hosted subscription page
+  // return "Hosted page is not available" (and hides UPI in its checkout).
+  // The hosted page collects contact details itself.
   const subscription = await razorpay.subscriptions.create({
     plan_id: razorpayPlanId(planId),
-    customer_id: customerId,
     total_count: EFFECTIVELY_FOREVER_CYCLES[planId],
     customer_notify: 1,
-  } as unknown as Parameters<typeof razorpay.subscriptions.create>[0]);
+  });
 
   shop.subscription.razorpaySubscriptionId = subscription.id;
-  shop.subscription.razorpayCustomerId = customerId;
   shop.subscription.planId = planId;
   await shop.save();
 
   res.json({
     subscriptionId: subscription.id,
     razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+    shortUrl: subscription.short_url,
   });
 }
 

@@ -1,15 +1,24 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import RazorpayCheckout from 'react-native-razorpay';
+import { InAppBrowser } from 'react-native-inappbrowser-reborn';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
 import { PLANS, type PlanId } from '../types/domain';
-import { createRazorpaySubscription, verifyRazorpayPayment } from '../api/subscription';
+import { createRazorpaySubscription, getSubscription } from '../api/subscription';
 import { getAuthErrorMessage } from '../auth/session';
 import SubscriptionHeader from '../components/SubscriptionHeader';
 import { AlertTriangleIcon, CheckCircleIcon, ShieldCheckIcon, UpiIcon } from '../components/SubscriptionIcons';
@@ -25,9 +34,33 @@ const MOCK_ENTRIES_USED = 4;
 
 export default function SubscriptionPlansScreen({ navigation }: Props) {
   useScreenStatusBar('light-content', colors.headerGradientStart);
-  const { shop } = useShopData();
+  const { shop, refetchAll } = useShopData();
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('yearly');
   const [subscribing, setSubscribing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (refreshing) {
+      return;
+    }
+    setRefreshing(true);
+    try {
+      const subscription = await getSubscription();
+      if (subscription.status === 'active') {
+        await refetchAll();
+        navigation.replace('ManageSubscription');
+      } else {
+        Alert.alert(
+          'No active subscription yet',
+          "We couldn't find a confirmed payment. UPI AutoPay can take a few minutes — try again shortly.",
+        );
+      }
+    } catch {
+      Alert.alert('Could not check status', 'Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const entriesUsed = MOCK_ENTRIES_USED;
   const limitReached = entriesUsed >= FREE_ENTRY_LIMIT;
@@ -44,38 +77,34 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
     }
     setSubscribing(true);
     try {
-      const { subscriptionId, razorpayKeyId } = await createRazorpaySubscription(selectedPlan);
+      const { shortUrl } = await createRazorpaySubscription(selectedPlan);
 
-      const result = await RazorpayCheckout.open({
-        key: razorpayKeyId,
-        subscription_id: subscriptionId,
-        name: 'VerifiedPhone — Dealer Sathi',
-        description: `${PLANS[selectedPlan].name} subscription`,
-        theme: { color: colors.primary },
-        prefill: shop?.phoneNumber ? { contact: shop.phoneNumber } : undefined,
-      });
-
-      // The UPI mandate itself still needs to be confirmed asynchronously —
-      // this call only checks the signature on what Checkout just returned,
-      // it doesn't grant access. The webhook (subscription.activated/
-      // charged) is what actually flips the shop's status to "active",
-      // which is exactly why the next screen is "activating", not "success".
-      await verifyRazorpayPayment({
-        razorpay_payment_id: result.razorpay_payment_id,
-        razorpay_subscription_id: result.razorpay_subscription_id,
-        razorpay_signature: result.razorpay_signature,
-      });
-
-      navigation.navigate('PaymentStatus', { status: 'activating', planId: selectedPlan });
-    } catch (err: any) {
-      // RazorpayCheckout.open rejects with { code, description } when the
-      // user cancels or the payment fails — not an ApiError, so it needs
-      // its own message extraction rather than getAuthErrorMessage's.
-      if (err?.description || err?.code !== undefined) {
-        navigation.navigate('PaymentStatus', { status: 'failed', planId: selectedPlan });
+      // Razorpay's hosted subscription page, not the native SDK: the SDK's
+      // checkout hides UPI AutoPay for our subscriptions while the hosted
+      // page shows it. Custom Tabs also hands upi:// intents to UPI apps.
+      if (await InAppBrowser.isAvailable()) {
+        await InAppBrowser.open(shortUrl, {
+          toolbarColor: colors.primary,
+          showTitle: true,
+          enableUrlBarHiding: true,
+        });
       } else {
-        Alert.alert('Could not start checkout', getAuthErrorMessage(err, 'Please try again.'));
+        await Linking.openURL(shortUrl);
+        return;
       }
+
+      // Closing the browser doesn't say whether they paid — only the
+      // webhook does, so ask rather than assume success or failure.
+      Alert.alert('Did you complete the payment?', undefined, [
+        { text: 'Not yet', style: 'cancel' },
+        {
+          text: 'Yes, check status',
+          onPress: () =>
+            navigation.navigate('PaymentStatus', { status: 'activating', planId: selectedPlan }),
+        },
+      ]);
+    } catch (err) {
+      Alert.alert('Could not start checkout', getAuthErrorMessage(err, 'Please try again.'));
     } finally {
       setSubscribing(false);
     }
@@ -223,8 +252,10 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
           <Text style={styles.legalDot}>·</Text>
           <Text style={styles.legalLink}>Privacy Policy</Text>
           <Text style={styles.legalDot}>·</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('ManageSubscription')}>
-            <Text style={styles.legalLinkAccent}>Already paid? Refresh</Text>
+          <TouchableOpacity onPress={handleRefresh} disabled={refreshing}>
+            <Text style={styles.legalLinkAccent}>
+              {refreshing ? 'Checking…' : 'Already paid? Refresh'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

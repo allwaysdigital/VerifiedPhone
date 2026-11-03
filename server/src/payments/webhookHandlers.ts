@@ -17,6 +17,19 @@ export function verifyWebhookSignature(rawBody: Buffer, signature: string | unde
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
+function paymentMethodLabel(method: string | undefined): string | null {
+  switch (method) {
+    case 'upi':
+      return 'UPI AutoPay';
+    case 'card':
+      return 'Card';
+    case 'emandate':
+      return 'eMandate (Net Banking)';
+    default:
+      return method ?? null;
+  }
+}
+
 function planIdFromRazorpayPlan(razorpayPlanId: string | undefined): PlanId {
   return razorpayPlanId === process.env.RAZORPAY_PLAN_YEARLY ? 'yearly' : 'monthly';
 }
@@ -60,7 +73,6 @@ export async function handleRazorpayWebhook(body: WebhookPayload): Promise<void>
       shop.subscription.planId = planIdFromRazorpayPlan(sub.plan_id);
       shop.subscription.expiredOn = null;
       shop.subscription.renewsOn = sub.current_end ? new Date(sub.current_end * 1000) : null;
-      shop.subscription.paymentMethod = 'UPI AutoPay';
       await shop.save();
       break;
     }
@@ -75,6 +87,7 @@ export async function handleRazorpayWebhook(body: WebhookPayload): Promise<void>
       shop.subscription.status = 'active';
       shop.subscription.expiredOn = null;
       shop.subscription.renewsOn = sub.current_end ? new Date(sub.current_end * 1000) : null;
+      shop.subscription.paymentMethod = paymentMethodLabel(payment.method);
       await shop.save();
 
       await Payment.updateOne(
@@ -87,7 +100,7 @@ export async function handleRazorpayWebhook(body: WebhookPayload): Promise<void>
             planId: planIdFromRazorpayPlan(sub.plan_id),
             amount: payment.amount / 100,
             status: 'paid',
-            method: payment.method ?? null,
+            method: paymentMethodLabel(payment.method),
             paidAt: new Date(),
           },
         },
@@ -129,7 +142,7 @@ export async function handleRazorpayWebhook(body: WebhookPayload): Promise<void>
             planId: planIdFromRazorpayPlan(sub.plan_id),
             amount: payment.amount / 100,
             status: 'failed',
-            method: payment.method ?? null,
+            method: paymentMethodLabel(payment.method),
             failureReason: payment.error_description ?? null,
             paidAt: new Date(),
           },

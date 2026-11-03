@@ -60,7 +60,7 @@ export type Subscription = {
   trialEndsAt: string | null;
   expiredOn: string | null;
   renewsOn: string | null;
-  paymentMethod: string;
+  paymentMethod: string | null;
 };
 
 export type PlanDefinition = {

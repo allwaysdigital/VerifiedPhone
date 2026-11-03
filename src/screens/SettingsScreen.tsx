@@ -162,7 +162,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
   const handleSubscriptionPress = () => {
     const rootNavigation = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
-    if (hasAccess) {
+    if (subscription?.status === 'active') {
       rootNavigation?.navigate('ManageSubscription');
     } else {
       rootNavigation?.navigate('SubscriptionPlans');

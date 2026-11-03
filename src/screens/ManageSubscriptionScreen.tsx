@@ -192,7 +192,7 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
                     <Text style={styles.invoiceMeta}>
                       {formatSubscriptionDate(invoice.paidAt)} ·{' '}
                       {invoice.status === 'paid'
-                        ? invoice.method || 'UPI AutoPay'
+                        ? invoice.method || 'AutoPay'
                         : invoice.failureReason || 'Payment failed'}
                     </Text>
                     <Text style={styles.invoiceId}>{invoice.status === 'paid' ? invoice.id : 'No receipt'}</Text>
