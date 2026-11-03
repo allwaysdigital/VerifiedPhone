@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,7 +7,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { PLANS } from '../types/domain';
-import { getSubscription, listInvoices, type Invoice } from '../api/subscription';
+import { checkRazorpaySubscription, getSubscription, listInvoices, type Invoice } from '../api/subscription';
 import { useShopData } from '../context/ShopDataContext';
 import SubscriptionHeader from '../components/SubscriptionHeader';
 import {
@@ -29,7 +29,13 @@ function SuccessContent({ navigation, route }: Props) {
   useEffect(() => {
     refetchAll().catch(() => {});
     listInvoices()
-      .then(invoices => setLatestPayment(invoices.find(i => i.status === 'paid') ?? null))
+      .then(invoices =>
+        setLatestPayment(
+          invoices.find(
+            i => i.status === 'paid' && (!route.params.subscriptionId || i.subscriptionId === route.params.subscriptionId),
+          ) ?? null,
+        ),
+      )
       .catch(() => {});
   }, [refetchAll]);
   const renewLabel = new Date(Date.now() + plan.periodDays * 86400000).toLocaleDateString('en-GB', {
@@ -96,6 +102,15 @@ function ActivatingContent({ navigation, route }: Props) {
   const plan = PLANS[planId];
   const [checking, setChecking] = useState(false);
 
+  // With a subscription ID, only that checkout being paid counts; the shop
+  // may already be active on a different plan.
+  const isPaid = useCallback(async () => {
+    if (subscriptionId) {
+      return (await checkRazorpaySubscription(subscriptionId)).paid;
+    }
+    return (await getSubscription()).status === 'active';
+  }, [subscriptionId]);
+
   // UPI AutoPay confirmation lands a few seconds to a few minutes after the
   // customer pays, so keep checking quietly instead of making them tap.
   useEffect(() => {
@@ -108,8 +123,7 @@ function ActivatingContent({ navigation, route }: Props) {
         return;
       }
       try {
-        const subscription = await getSubscription();
-        if (!cancelled && subscription.status === 'active') {
+        if (!cancelled && (await isPaid())) {
           clearInterval(timer);
           navigation.setParams({ status: 'success' });
         }
@@ -121,7 +135,7 @@ function ActivatingContent({ navigation, route }: Props) {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [navigation]);
+  }, [navigation, isPaid]);
 
   const handleRefreshStatus = async () => {
     if (checking) {
@@ -129,8 +143,7 @@ function ActivatingContent({ navigation, route }: Props) {
     }
     setChecking(true);
     try {
-      const subscription = await getSubscription();
-      if (subscription.status === 'active') {
+      if (await isPaid()) {
         navigation.setParams({ status: 'success' });
       } else {
         Alert.alert(

@@ -5,6 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import {
   cancelSubscription,
   createRazorpaySubscription,
+  getRazorpaySubscriptionStatus,
   getSubscription,
   listInvoices,
   razorpayWebhook,
@@ -30,6 +31,12 @@ router.post(
   requireAuth,
   asyncHandler(resolveShop),
   asyncHandler(verifyRazorpayPayment),
+);
+router.get(
+  '/razorpay/status/:subscriptionId',
+  requireAuth,
+  asyncHandler(resolveShop),
+  asyncHandler(getRazorpaySubscriptionStatus),
 );
 // Called by Razorpay's servers directly, not the app — authenticated by
 // HMAC signature (see payments/webhookHandlers.ts), not a user session.

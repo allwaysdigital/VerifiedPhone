@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { Shop } from '../models/Shop';
 import { fileToUrl } from '../upload/multerConfig';
 import { isTestPlanEnabled } from '../payments/razorpayClient';
+import { refreshShopSubscription } from './subscription.controller';
 
 function serializeShop(shop: InstanceType<typeof Shop>) {
   return {
@@ -27,7 +28,7 @@ function serializeShop(shop: InstanceType<typeof Shop>) {
 }
 
 export async function getMe(req: Request, res: Response) {
-  res.json(serializeShop(req.shop!));
+  res.json(serializeShop(await refreshShopSubscription(req.shop!)));
 }
 
 export async function register(req: Request, res: Response) {

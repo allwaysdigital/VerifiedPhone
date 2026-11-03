@@ -22,6 +22,10 @@ const subscriptionSchema = new Schema(
     // payments/razorpayClient.ts) — the webhook handler looks the shop up
     // by razorpaySubscriptionId for every subsequent lifecycle event.
     razorpaySubscriptionId: { type: String, default: null, index: true },
+    // A checkout that hasn't been paid yet. Kept apart from the fields
+    // above so an abandoned checkout never changes the shop's current plan;
+    // promoted to razorpaySubscriptionId/planId once Razorpay confirms it.
+    pendingRazorpaySubscriptionId: { type: String, default: null, index: true },
     razorpayCustomerId: { type: String, default: null },
     renewsOn: { type: Date, default: null },
     // What Razorpay actually charges per cycle (₹), which can differ from
