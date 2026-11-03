@@ -24,6 +24,7 @@ import InvoicePreviewScreen from '../screens/InvoicePreviewScreen';
 import StockReportPreviewScreen from '../screens/StockReportPreviewScreen';
 import PoliceExportRecordScreen from '../screens/PoliceExportRecordScreen';
 import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
+import PaymentStatusScreen from '../screens/PaymentStatusScreen';
 import PlanDetailScreen from '../screens/PlanDetailScreen';
 import TrialActivatedScreen from '../screens/TrialActivatedScreen';
 import ManageSubscriptionScreen from '../screens/ManageSubscriptionScreen';
@@ -61,6 +62,7 @@ export default function RootNavigator() {
         <Stack.Screen name="StockReportPreview" component={StockReportPreviewScreen} />
         <Stack.Screen name="PoliceExportRecord" component={PoliceExportRecordScreen} />
         <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
+        <Stack.Screen name="PaymentStatus" component={PaymentStatusScreen} />
         <Stack.Screen name="PlanDetail" component={PlanDetailScreen} />
         <Stack.Screen name="TrialActivated" component={TrialActivatedScreen} />
         <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />

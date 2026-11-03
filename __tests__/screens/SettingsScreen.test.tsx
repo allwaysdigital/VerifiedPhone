@@ -38,6 +38,7 @@ function renderScreen(shopDataOverrides: Parameters<typeof createMockShopDataCon
       planId: 'monthly',
       trialEndsAt: null,
       expiredOn: null,
+      renewsOn: null,
       paymentMethod: 'UPI (ending 1234)',
     },
     updateShop: jest.fn().mockResolvedValue(undefined),

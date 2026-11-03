@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import { useShopData } from '../context/ShopDataContext';
 import { SHOP_NAME } from '../constants/app';
 import { formatINR, formatLakhs } from '../utils/format';
 import EmptyState from '../components/EmptyState';
+import FinalNudgeBottomSheet from '../components/FinalNudgeBottomSheet';
 import HeaderLogo from '../assets/icons/header_logo.svg';
 import StockBoxIcon from '../assets/icons/stock_box.svg';
 import PurchaseCartIcon from '../assets/icons/purchase_cart.svg';
@@ -80,6 +81,9 @@ export default function DashboardScreen({ navigation }: Props) {
   useScreenStatusBar('light-content', colors.primary);
   const insets = useSafeAreaInsets();
   const { shop, devices } = useShopData();
+  // Dev-only preview trigger — real gating (watching the actual free-entry
+  // count) lands alongside the Razorpay integration.
+  const [nudgeVisible, setNudgeVisible] = useState(false);
 
   const today = todayLabel();
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -224,12 +228,43 @@ export default function DashboardScreen({ navigation }: Props) {
             ))}
           </View>
         )}
+
+        {__DEV__ ? (
+          <TouchableOpacity style={styles.devPreviewButton} onPress={() => setNudgeVisible(true)}>
+            <Text style={styles.devPreviewButtonText}>Dev preview: entry limit nudge</Text>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
+
+      <FinalNudgeBottomSheet
+        visible={nudgeVisible}
+        entriesUsed={10}
+        entryLimit={10}
+        onChoosePlan={() => {
+          setNudgeVisible(false);
+          navigation.navigate('SubscriptionPlans');
+        }}
+        onLater={() => setNudgeVisible(false)}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  devPreviewButton: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  devPreviewButtonText: {
+    fontSize: 12,
+    color: colors.textFaint,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.white,

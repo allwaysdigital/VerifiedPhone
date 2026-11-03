@@ -17,7 +17,13 @@ const subscriptionSchema = new Schema(
     },
     trialEndsAt: { type: Date, default: null },
     expiredOn: { type: Date, default: null },
-    paymentMethod: { type: String, default: 'UPI (ending 1234)' },
+    paymentMethod: { type: String, default: null },
+    // Set once a Razorpay subscription is created for this shop (see
+    // payments/razorpayClient.ts) — the webhook handler looks the shop up
+    // by razorpaySubscriptionId for every subsequent lifecycle event.
+    razorpaySubscriptionId: { type: String, default: null, index: true },
+    razorpayCustomerId: { type: String, default: null },
+    renewsOn: { type: Date, default: null },
   },
   { _id: false },
 );

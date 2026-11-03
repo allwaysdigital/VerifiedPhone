@@ -60,6 +60,9 @@
         <button class="nav-item" data-view="shops">
           <span class="nav-icon" data-icon="shops"></span> Shops
         </button>
+        <button class="nav-item" data-view="subscriptions">
+          <span class="nav-icon" data-icon="subscriptions"></span> Subscriptions
+        </button>
         <button class="nav-item" data-view="devices">
           <span class="nav-icon" data-icon="devices"></span> Devices
         </button>
@@ -94,6 +97,24 @@
           <p class="error" id="shops-error" hidden></p>
           <div class="shop-grid" id="shops-grid"></div>
           <p class="empty-state" id="shops-empty" hidden>No shops found.</p>
+        </section>
+
+        <!-- Subscriptions -->
+        <section class="panel" data-panel="subscriptions" hidden>
+          <div class="stat-grid stat-grid-compact" id="subscriptions-summary"></div>
+          <div class="panel-toolbar">
+            <input type="search" id="subscriptions-search" placeholder="Search phone or shop name…" />
+            <select id="subscriptions-status-filter">
+              <option value="">All statuses</option>
+              <option value="none">None</option>
+              <option value="trial">Trial</option>
+              <option value="active">Active</option>
+              <option value="expired">Expired</option>
+            </select>
+          </div>
+          <p class="error" id="subscriptions-error" hidden></p>
+          <div class="shop-grid" id="subscriptions-grid"></div>
+          <p class="empty-state" id="subscriptions-empty" hidden>No shops found.</p>
         </section>
 
         <!-- Devices -->

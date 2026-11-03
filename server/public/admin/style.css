@@ -444,6 +444,11 @@ button.secondary:hover {
   gap: 16px;
 }
 
+.stat-grid-compact {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: 20px;
+}
+
 .stat-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -597,6 +602,26 @@ button.secondary:hover {
   color: var(--danger);
 }
 
+.badge.active {
+  background: var(--green-bg);
+  color: var(--green-text);
+}
+
+.badge.trial {
+  background: var(--blue-bg);
+  color: var(--blue-text);
+}
+
+.badge.expired {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.badge.none {
+  background: var(--gray-bg);
+  color: var(--gray-text);
+}
+
 .icon-btn {
   background: var(--card);
   color: var(--danger);
@@ -687,6 +712,14 @@ button.secondary:hover {
 
 .field select {
   width: 100%;
+}
+
+.shop-card-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--text-muted);
 }
 
 .shop-card-footer {
