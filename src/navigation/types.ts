@@ -82,6 +82,11 @@ export type RootStackParamList = {
   };
   PoliceExportRecord: { deviceId: string };
   SubscriptionPlans: undefined;
+  PaymentStatus: {
+    status: 'success' | 'activating' | 'failed';
+    planId: PlanId;
+    subscriptionId?: string;
+  };
   PlanDetail: { planId: PlanId };
   TrialActivated: { planId: PlanId };
   ManageSubscription: undefined;

@@ -83,6 +83,57 @@ export async function updateShop(req: Request, res: Response) {
   res.json(serializeShopForAdmin(shop));
 }
 
+function serializeSubscriptionForAdmin(shop: InstanceType<typeof Shop>) {
+  return {
+    id: shop._id.toString(),
+    phoneNumber: shop.phoneNumber,
+    shopName: shop.shopName,
+    profileCompleted: shop.profileCompleted ?? false,
+    subscription: {
+      status: shop.subscription?.status ?? 'trial',
+      planId: shop.subscription?.planId ?? null,
+      trialEndsAt: shop.subscription?.trialEndsAt ?? null,
+      expiredOn: shop.subscription?.expiredOn ?? null,
+      paymentMethod: shop.subscription?.paymentMethod ?? null,
+    },
+    createdAt: shop.get('createdAt'),
+  };
+}
+
+export async function listSubscriptionsAdmin(req: Request, res: Response) {
+  const { q, status } = req.query as { q?: string; status?: string };
+
+  const filter: Record<string, unknown> = {};
+  if (q) {
+    filter.$or = [
+      { phoneNumber: { $regex: q, $options: 'i' } },
+      { shopName: { $regex: q, $options: 'i' } },
+    ];
+  }
+  if (status) {
+    filter['subscription.status'] = status;
+  }
+
+  const [shops, summaryAgg] = await Promise.all([
+    Shop.find(filter).sort({ createdAt: -1 }),
+    Shop.aggregate([
+      { $group: { _id: { $ifNull: ['$subscription.status', 'trial'] }, count: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const summary = { none: 0, trial: 0, active: 0, expired: 0 } as Record<string, number>;
+  for (const row of summaryAgg) {
+    if (row._id in summary) {
+      summary[row._id as string] = row.count;
+    }
+  }
+
+  res.json({
+    shops: shops.map(serializeSubscriptionForAdmin),
+    summary,
+  });
+}
+
 export async function getOverview(_req: Request, res: Response) {
   const [
     totalShops,

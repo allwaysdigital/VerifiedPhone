@@ -13,7 +13,10 @@ export function createApp() {
   const app = express();
 
   app.use(cors());
-  app.use(express.json());
+  // Captures the exact request bytes on req.rawBody — the Razorpay webhook
+  // handler needs them to verify the HMAC signature, which is computed over
+  // the raw payload, not the parsed JSON object.
+  app.use(express.json({ verify: (req, _res, buf) => { (req as express.Request).rawBody = buf; } }));
   // Uploaded images (device photos, shop logos) are stored in S3 and served
   // directly from there — see server/src/upload/s3Client.ts. Nothing is
   // written to local disk, since the app server's filesystem is ephemeral.
