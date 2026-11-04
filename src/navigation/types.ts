@@ -1,3 +1,4 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { PlanId } from '../types/domain';
 
 export type PendingShopDetails = {
@@ -44,7 +45,7 @@ export type RootStackParamList = {
   };
   Register: undefined;
   CompleteProfile: undefined;
-  MainTabs: undefined;
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   DigitalSignature: { purchaseData: PendingPurchaseData };
   DeviceDetails: { deviceId: string };
   DeviceHistory: { imei1: string };

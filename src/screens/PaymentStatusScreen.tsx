@@ -9,6 +9,7 @@ import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { PLANS } from '../types/domain';
 import { checkRazorpaySubscription, getSubscription, listInvoices, type Invoice } from '../api/subscription';
 import { useShopData } from '../context/ShopDataContext';
+import { resetToPaymentSuccess } from '../navigation/paymentSuccess';
 import SubscriptionHeader from '../components/SubscriptionHeader';
 import {
   ClockIcon,
@@ -21,7 +22,7 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, 'PaymentStatus'>;
 
 function SuccessContent({ navigation, route }: Props) {
-  const { planId } = route.params;
+  const { planId, subscriptionId } = route.params;
   const plan = PLANS[planId];
   const { refetchAll } = useShopData();
   const [latestPayment, setLatestPayment] = useState<Invoice | null>(null);
@@ -32,12 +33,12 @@ function SuccessContent({ navigation, route }: Props) {
       .then(invoices =>
         setLatestPayment(
           invoices.find(
-            i => i.status === 'paid' && (!route.params.subscriptionId || i.subscriptionId === route.params.subscriptionId),
+            i => i.status === 'paid' && (!subscriptionId || i.subscriptionId === subscriptionId),
           ) ?? null,
         ),
       )
       .catch(() => {});
-  }, [refetchAll]);
+  }, [refetchAll, subscriptionId]);
   const renewLabel = new Date(Date.now() + plan.periodDays * 86400000).toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -87,7 +88,7 @@ function SuccessContent({ navigation, route }: Props) {
 
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => navigation.navigate('ManageSubscription')}
+        onPress={() => navigation.popTo('ManageSubscription')}
         activeOpacity={0.85}>
         <Text style={styles.primaryButtonText}>Continue</Text>
         <Text style={styles.primaryButtonArrow}>→</Text>
@@ -125,7 +126,7 @@ function ActivatingContent({ navigation, route }: Props) {
       try {
         if (!cancelled && (await isPaid())) {
           clearInterval(timer);
-          navigation.setParams({ status: 'success' });
+          resetToPaymentSuccess(navigation, { planId, subscriptionId });
         }
       } catch {
         // Transient network errors: the next tick retries.
@@ -135,7 +136,7 @@ function ActivatingContent({ navigation, route }: Props) {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [navigation, isPaid]);
+  }, [navigation, isPaid, planId, subscriptionId]);
 
   const handleRefreshStatus = async () => {
     if (checking) {
@@ -144,7 +145,7 @@ function ActivatingContent({ navigation, route }: Props) {
     setChecking(true);
     try {
       if (await isPaid()) {
-        navigation.setParams({ status: 'success' });
+        resetToPaymentSuccess(navigation, { planId, subscriptionId });
       } else {
         Alert.alert(
           'Still processing',
@@ -329,7 +330,7 @@ function FailedContent({ navigation, route }: Props) {
 
 export default function PaymentStatusScreen(props: Props) {
   const { navigation, route } = props;
-  const { status, planId } = route.params;
+  const { status } = route.params;
   useScreenStatusBar('light-content', colors.headerGradientStart);
 
   const isSuccess = status === 'success';
