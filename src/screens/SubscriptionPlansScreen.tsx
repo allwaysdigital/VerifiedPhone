@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { InAppBrowser } from 'react-native-inappbrowser-reborn';
+import { resetToPaymentSuccess } from '../navigation/paymentSuccess';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -127,7 +128,7 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
       // still confirming can be picked up with "Already paid? Refresh".
       if (paid) {
         await refetchAll().catch(() => {});
-        navigation.navigate('PaymentStatus', { status: 'success', planId: selectedPlan, subscriptionId });
+        resetToPaymentSuccess(navigation, { planId: selectedPlan, subscriptionId });
       }
     } catch (err) {
       Alert.alert('Could not start checkout', getAuthErrorMessage(err, 'Please try again.'));

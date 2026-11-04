@@ -3,7 +3,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Modal,
-  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,6 +16,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
+import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
 import LogoMark from '../assets/logo_mark.svg';
 import { isValidMobile, MOBILE_MESSAGE } from '../utils/validators';
 import { getAuthErrorMessage, sendOtp } from '../auth/session';
@@ -30,6 +31,7 @@ export default function LoginScreen({ navigation, route }: Props) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
+  const keyboardVisible = useKeyboardVisible();
 
   const handlePhoneChange = (text: string) => {
     setPhoneNumber(text.replace(/[^\d]/g, ''));
@@ -61,11 +63,15 @@ export default function LoginScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.centerWrap}>
-        <View style={styles.logoWrap}>
-          <LogoMark width={190} height={180} />
+      {/* Android 16 always draws edge-to-edge, so adjustResize no longer
+          lifts content above the keyboard — avoid it here on both platforms. */}
+      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
+        <ScrollView
+          contentContainerStyle={styles.centerWrap}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+        <View style={[styles.logoWrap, keyboardVisible && styles.logoWrapCompact]}>
+          <LogoMark width={keyboardVisible ? 110 : 190} height={keyboardVisible ? 104 : 180} />
         </View>
         <View style={styles.card}>
           <Text style={styles.title}>
@@ -135,6 +141,7 @@ export default function LoginScreen({ navigation, route }: Props) {
             </Text>
           </TouchableOpacity>
         </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -145,14 +152,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
+  flex: {
+    flex: 1,
+  },
   logoWrap: {
     alignItems: 'center',
     marginBottom: 32,
   },
+  logoWrapCompact: {
+    marginBottom: 16,
+  },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 16,
+    paddingVertical: 24,
   },
   card: {
     backgroundColor: colors.white,
