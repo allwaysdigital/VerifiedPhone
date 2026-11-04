@@ -44,6 +44,7 @@ export async function verifyRazorpayPayment(input: RazorpayVerifyInput): Promise
 
 export type Invoice = {
   id: string;
+  subscriptionId?: string;
   planId: PlanId;
   amount: number;
   status: 'paid' | 'failed';
@@ -55,4 +56,10 @@ export type Invoice = {
 export async function listInvoices(): Promise<Invoice[]> {
   const data = await request<{ invoices: Invoice[] }>('/api/subscription/invoices');
   return data.invoices;
+}
+
+export async function checkRazorpaySubscription(
+  subscriptionId: string,
+): Promise<{ status: string; paid: boolean }> {
+  return request(`/api/subscription/razorpay/status/${encodeURIComponent(subscriptionId)}`);
 }

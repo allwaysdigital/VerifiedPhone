@@ -37,6 +37,7 @@ type RazorpaySubscriptionEntity = {
   plan_id?: string;
   current_end?: number; // unix seconds
   status?: string;
+  paid_count?: number;
 };
 
 type RazorpayPaymentEntity = {
@@ -55,7 +56,23 @@ type WebhookPayload = {
 };
 
 async function findShopBySubscriptionId(razorpaySubscriptionId: string) {
-  return Shop.findOne({ 'subscription.razorpaySubscriptionId': razorpaySubscriptionId });
+  return Shop.findOne({
+    $or: [
+      { 'subscription.razorpaySubscriptionId': razorpaySubscriptionId },
+      { 'subscription.pendingRazorpaySubscriptionId': razorpaySubscriptionId },
+    ],
+  });
+}
+
+// A paid pending checkout becomes the shop's current subscription.
+function promoteIfPending(shop: InstanceType<typeof Shop>, sub: RazorpaySubscriptionEntity) {
+  if (shop.subscription.razorpaySubscriptionId !== sub.id) {
+    shop.subscription.razorpaySubscriptionId = sub.id;
+    shop.subscription.planId = planIdFromRazorpayPlan(sub.plan_id);
+  }
+  if (shop.subscription.pendingRazorpaySubscriptionId === sub.id) {
+    shop.subscription.pendingRazorpaySubscriptionId = null;
+  }
 }
 
 export async function handleRazorpayWebhook(body: WebhookPayload): Promise<void> {
@@ -67,6 +84,7 @@ export async function handleRazorpayWebhook(body: WebhookPayload): Promise<void>
       if (!sub) return;
       const shop = await findShopBySubscriptionId(sub.id);
       if (!shop) return;
+      promoteIfPending(shop, sub);
       shop.subscription.status = 'active';
       shop.subscription.planId = planIdFromRazorpayPlan(sub.plan_id);
       shop.subscription.expiredOn = null;
@@ -82,6 +100,7 @@ export async function handleRazorpayWebhook(body: WebhookPayload): Promise<void>
       const shop = await findShopBySubscriptionId(sub.id);
       if (!shop) return;
 
+      promoteIfPending(shop, sub);
       shop.subscription.status = 'active';
       shop.subscription.expiredOn = null;
       shop.subscription.renewsOn = sub.current_end ? new Date(sub.current_end * 1000) : null;
@@ -114,6 +133,15 @@ export async function handleRazorpayWebhook(body: WebhookPayload): Promise<void>
       if (!sub) return;
       const shop = await findShopBySubscriptionId(sub.id);
       if (!shop) return;
+      // An abandoned (never paid) checkout ending says nothing about the
+      // shop's current subscription — just forget it.
+      if (shop.subscription.razorpaySubscriptionId !== sub.id || sub.paid_count === 0) {
+        if (shop.subscription.pendingRazorpaySubscriptionId === sub.id) {
+          shop.subscription.pendingRazorpaySubscriptionId = null;
+          await shop.save();
+        }
+        return;
+      }
       // A cancelled mandate still covers the cycle already paid for, so
       // keep access until current_end; getSubscription expires it after.
       const paidUntil = sub.current_end ? new Date(sub.current_end * 1000) : null;

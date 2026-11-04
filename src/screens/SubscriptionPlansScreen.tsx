@@ -18,7 +18,11 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
 import { PLANS, type PlanId } from '../types/domain';
-import { createRazorpaySubscription, getSubscription } from '../api/subscription';
+import {
+  checkRazorpaySubscription,
+  createRazorpaySubscription,
+  getSubscription,
+} from '../api/subscription';
 import { getAuthErrorMessage } from '../auth/session';
 import SubscriptionHeader from '../components/SubscriptionHeader';
 import { AlertTriangleIcon, CheckCircleIcon, ShieldCheckIcon, UpiIcon } from '../components/SubscriptionIcons';
@@ -88,13 +92,14 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
         return;
       }
 
-      // Close the payment page by itself once the server sees the payment.
-      // Android may pause this while the browser is in front, so the
-      // status screen below keeps checking after the page closes too.
+      // Only *this* checkout being paid counts — the shop may already be
+      // active on another plan. Closes the payment page once it's paid;
+      // Android may pause this while the browser is in front, so it's
+      // checked once more after the page closes.
       let paid = false;
       const poll = setInterval(async () => {
         try {
-          if ((await getSubscription()).status === 'active') {
+          if ((await checkRazorpaySubscription(subscriptionId)).paid) {
             paid = true;
             clearInterval(poll);
             InAppBrowser.close();
@@ -112,12 +117,18 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
       } finally {
         clearInterval(poll);
       }
+      if (!paid) {
+        paid = await checkRazorpaySubscription(subscriptionId)
+          .then(r => r.paid)
+          .catch(() => false);
+      }
 
-      navigation.navigate('PaymentStatus', {
-        status: paid ? 'success' : 'activating',
-        planId: selectedPlan,
-        subscriptionId,
-      });
+      // Closed without paying: just stay on this screen. A payment that's
+      // still confirming can be picked up with "Already paid? Refresh".
+      if (paid) {
+        await refetchAll().catch(() => {});
+        navigation.navigate('PaymentStatus', { status: 'success', planId: selectedPlan, subscriptionId });
+      }
     } catch (err) {
       Alert.alert('Could not start checkout', getAuthErrorMessage(err, 'Please try again.'));
     } finally {
