@@ -8,13 +8,3 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
-
-# react-native-razorpay — required by the SDK's own docs, since release
-# builds here run with minification on (enableProguardInReleaseBuilds).
--keepattributes *Annotation*
--dontwarn com.razorpay.**
--keep class com.razorpay.** {*;}
--optimizations !method/inlining/
--keepclasseswithmembers class * {
-  public void onPayment*(...);
-}
