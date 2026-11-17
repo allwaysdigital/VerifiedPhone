@@ -26,20 +26,22 @@ import {
 } from '../api/subscription';
 import { getAuthErrorMessage } from '../auth/session';
 import SubscriptionHeader from '../components/SubscriptionHeader';
-import { AlertTriangleIcon, CheckCircleIcon, ShieldCheckIcon, UpiIcon } from '../components/SubscriptionIcons';
+import {
+  AlertTriangleIcon,
+  CheckCircleIcon,
+  ShieldCheckIcon,
+  UpiIcon,
+} from '../components/SubscriptionIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SubscriptionPlans'>;
 
-// Real entry-counting/gating isn't wired up yet (tracked separately, before
-// Razorpay integration) — this screen is built to support both states
-// against a mock count so the real data can drop in later with no layout
-// changes. FREE_ENTRY_LIMIT matches the Figma spec's "10 free entries".
+// Matches the Figma spec's "10 free entries". Each purchase entry is one
+// device record, so the shop's device count is the number of entries used.
 const FREE_ENTRY_LIMIT = 10;
-const MOCK_ENTRIES_USED = 4;
 
 export default function SubscriptionPlansScreen({ navigation }: Props) {
   useScreenStatusBar('light-content', colors.headerGradientStart);
-  const { shop, subscription, refetchAll } = useShopData();
+  const { shop, subscription, devices, refetchAll } = useShopData();
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('yearly');
   const [subscribing, setSubscribing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,7 +69,10 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
     }
   };
 
-  const entriesUsed = MOCK_ENTRIES_USED;
+  // Subscribers reach this screen via "Switch to Yearly"; a free-entry
+  // counter means nothing to them.
+  const showFreeEntryBanner = subscription?.status !== 'active';
+  const entriesUsed = Math.min(devices.length, FREE_ENTRY_LIMIT);
   const limitReached = entriesUsed >= FREE_ENTRY_LIMIT;
   const entriesLeft = Math.max(0, FREE_ENTRY_LIMIT - entriesUsed);
 
@@ -82,14 +87,20 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
     }
     setSubscribing(true);
     try {
-      const { shortUrl, subscriptionId } = await createRazorpaySubscription(selectedPlan);
+      const { shortUrl, subscriptionId } = await createRazorpaySubscription(
+        selectedPlan,
+      );
 
       // Razorpay's hosted subscription page, not the native SDK: the SDK's
       // checkout hides UPI AutoPay for our subscriptions while the hosted
       // page shows it. Custom Tabs also hands upi:// intents to UPI apps.
       if (!(await InAppBrowser.isAvailable())) {
         await Linking.openURL(shortUrl);
-        navigation.navigate('PaymentStatus', { status: 'activating', planId: selectedPlan, subscriptionId });
+        navigation.navigate('PaymentStatus', {
+          status: 'activating',
+          planId: selectedPlan,
+          subscriptionId,
+        });
         return;
       }
 
@@ -128,10 +139,16 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
       // still confirming can be picked up with "Already paid? Refresh".
       if (paid) {
         await refetchAll().catch(() => {});
-        resetToPaymentSuccess(navigation, { planId: selectedPlan, subscriptionId });
+        resetToPaymentSuccess(navigation, {
+          planId: selectedPlan,
+          subscriptionId,
+        });
       }
     } catch (err) {
-      Alert.alert('Could not start checkout', getAuthErrorMessage(err, 'Please try again.'));
+      Alert.alert(
+        'Could not start checkout',
+        getAuthErrorMessage(err, 'Please try again.'),
+      );
     } finally {
       setSubscribing(false);
     }
@@ -144,53 +161,70 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
         title={shop?.shopName || 'My Shop'}
         subtitle={
           <>
-            VERIFIED <Text style={styles.wordmarkBold}>PHONE</Text> — DEALER SATHI
+            VERIFIED <Text style={styles.wordmarkBold}>PHONE</Text> — DEALER
+            SATHI
           </>
         }
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.banner, limitReached ? styles.bannerLimit : styles.bannerTrial]}>
-          <View style={styles.bannerTopRow}>
-            <View style={styles.bannerTitleRow}>
-              <View style={styles.bannerIconWrap}>
-                <AlertTriangleIcon size={14} />
-              </View>
-              <Text style={styles.bannerTitle}>
-                {limitReached ? 'Free limit reached' : 'Free trial in progress'}
-              </Text>
-            </View>
-            {limitReached ? (
-              <View style={styles.bannerCountPill}>
-                <Text style={styles.bannerCountPillText}>
-                  {entriesUsed} / {FREE_ENTRY_LIMIT} used
+        {showFreeEntryBanner ? (
+          <View
+            style={[
+              styles.banner,
+              limitReached ? styles.bannerLimit : styles.bannerTrial,
+            ]}
+          >
+            <View style={styles.bannerTopRow}>
+              <View style={styles.bannerTitleRow}>
+                <View style={styles.bannerIconWrap}>
+                  <AlertTriangleIcon size={14} />
+                </View>
+                <Text style={styles.bannerTitle}>
+                  {limitReached
+                    ? 'Free limit reached'
+                    : 'Free trial in progress'}
                 </Text>
               </View>
-            ) : (
-              <View style={styles.bannerTrialRight}>
-                <Text style={styles.bannerLeftText}>{entriesLeft} left</Text>
+              {limitReached ? (
                 <View style={styles.bannerCountPill}>
                   <Text style={styles.bannerCountPillText}>
                     {entriesUsed} / {FREE_ENTRY_LIMIT} used
                   </Text>
                 </View>
-              </View>
-            )}
+              ) : (
+                <View style={styles.bannerTrialRight}>
+                  <Text style={styles.bannerLeftText}>{entriesLeft} left</Text>
+                  <View style={styles.bannerCountPill}>
+                    <Text style={styles.bannerCountPillText}>
+                      {entriesUsed} / {FREE_ENTRY_LIMIT} used
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${Math.min(
+                      100,
+                      (entriesUsed / FREE_ENTRY_LIMIT) * 100,
+                    )}%`,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.bannerBody}>
+              {limitReached
+                ? `You've used all ${FREE_ENTRY_LIMIT} free purchase entries. Subscribe to keep adding entries.`
+                : `You have ${entriesLeft} free purchase ${
+                    entriesLeft === 1 ? 'entry' : 'entries'
+                  } remaining. Subscribe now to unlock unlimited entries anytime.`}
+            </Text>
           </View>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${Math.min(100, (entriesUsed / FREE_ENTRY_LIMIT) * 100)}%` },
-              ]}
-            />
-          </View>
-          <Text style={styles.bannerBody}>
-            {limitReached
-              ? 'Your draft is saved. Subscribe to unlock unlimited entries and continue.'
-              : `You have ${entriesLeft} free purchase entries remaining. Subscribe now to unlock unlimited entries anytime.`}
-          </Text>
-        </View>
+        ) : null}
 
         <View style={styles.headlineWrap}>
           <Text style={styles.headline}>Keep every phone record verified</Text>
@@ -204,27 +238,44 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
 
         <View style={styles.plansWrap}>
           <TouchableOpacity
-            style={[styles.planCard, selectedPlan === 'yearly' && styles.planCardSelected]}
+            style={[
+              styles.planCard,
+              selectedPlan === 'yearly' && styles.planCardSelected,
+            ]}
             onPress={() => setSelectedPlan('yearly')}
-            activeOpacity={0.8}>
+            activeOpacity={0.8}
+          >
             <View style={styles.bestValueBadge}>
               <Text style={styles.bestValueBadgeText}>BEST VALUE</Text>
             </View>
             <View style={styles.planRow}>
-              <View style={[styles.radio, selectedPlan === 'yearly' && styles.radioSelected]}>
-                {selectedPlan === 'yearly' ? <View style={styles.radioDot} /> : null}
+              <View
+                style={[
+                  styles.radio,
+                  selectedPlan === 'yearly' && styles.radioSelected,
+                ]}
+              >
+                {selectedPlan === 'yearly' ? (
+                  <View style={styles.radioDot} />
+                ) : null}
               </View>
               <View style={styles.planInfo}>
                 <Text style={styles.planName}>Yearly</Text>
                 <View style={styles.planPriceRow}>
-                  <Text style={styles.planPrice}>₹{yearly.price.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.planPrice}>
+                    ₹{yearly.price.toLocaleString('en-IN')}
+                  </Text>
                   <Text style={styles.planPriceSuffix}>/year incl. GST</Text>
                 </View>
                 <View style={styles.planMetaRow}>
-                  <Text style={styles.planMetaGreen}>₹{yearlyMonthlyEquivalent}/month</Text>
+                  <Text style={styles.planMetaGreen}>
+                    ₹{yearlyMonthlyEquivalent}/month
+                  </Text>
                   <Text style={styles.planMetaDot}>•</Text>
                   <View style={styles.saveChip}>
-                    <Text style={styles.saveChipText}>Save ₹{yearlySavings.toLocaleString('en-IN')}</Text>
+                    <Text style={styles.saveChipText}>
+                      Save ₹{yearlySavings.toLocaleString('en-IN')}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -232,17 +283,30 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.planCard, selectedPlan === 'monthly' && styles.planCardSelected]}
+            style={[
+              styles.planCard,
+              selectedPlan === 'monthly' && styles.planCardSelected,
+            ]}
             onPress={() => setSelectedPlan('monthly')}
-            activeOpacity={0.8}>
+            activeOpacity={0.8}
+          >
             <View style={styles.planRow}>
-              <View style={[styles.radio, selectedPlan === 'monthly' && styles.radioSelected]}>
-                {selectedPlan === 'monthly' ? <View style={styles.radioDot} /> : null}
+              <View
+                style={[
+                  styles.radio,
+                  selectedPlan === 'monthly' && styles.radioSelected,
+                ]}
+              >
+                {selectedPlan === 'monthly' ? (
+                  <View style={styles.radioDot} />
+                ) : null}
               </View>
               <View style={styles.planInfo}>
                 <Text style={styles.planName}>Monthly</Text>
                 <View style={styles.planPriceRow}>
-                  <Text style={styles.planPrice}>₹{monthly.price.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.planPrice}>
+                    ₹{monthly.price.toLocaleString('en-IN')}
+                  </Text>
                   <Text style={styles.planPriceSuffix}>/month incl. GST</Text>
                 </View>
               </View>
@@ -251,18 +315,33 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
 
           {subscription?.testPlanEnabled ? (
             <TouchableOpacity
-              style={[styles.planCard, selectedPlan === 'weekly_test' && styles.planCardSelected]}
+              style={[
+                styles.planCard,
+                selectedPlan === 'weekly_test' && styles.planCardSelected,
+              ]}
               onPress={() => setSelectedPlan('weekly_test')}
-              activeOpacity={0.8}>
+              activeOpacity={0.8}
+            >
               <View style={styles.planRow}>
-                <View style={[styles.radio, selectedPlan === 'weekly_test' && styles.radioSelected]}>
-                  {selectedPlan === 'weekly_test' ? <View style={styles.radioDot} /> : null}
+                <View
+                  style={[
+                    styles.radio,
+                    selectedPlan === 'weekly_test' && styles.radioSelected,
+                  ]}
+                >
+                  {selectedPlan === 'weekly_test' ? (
+                    <View style={styles.radioDot} />
+                  ) : null}
                 </View>
                 <View style={styles.planInfo}>
                   <Text style={styles.planName}>Test Plan · 1 week</Text>
                   <View style={styles.planPriceRow}>
-                    <Text style={styles.planPrice}>₹{PLANS.weekly_test.price}</Text>
-                    <Text style={styles.planPriceSuffix}>/week · for payment verification</Text>
+                    <Text style={styles.planPrice}>
+                      ₹{PLANS.weekly_test.price}
+                    </Text>
+                    <Text style={styles.planPriceSuffix}>
+                      /week · for payment verification
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -272,22 +351,30 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
 
         <View style={styles.footNotePill}>
           <ShieldCheckIcon size={14} color={colors.textMuted} />
-          <Text style={styles.footNoteText}>Saved records & PDFs always stay available</Text>
+          <Text style={styles.footNoteText}>
+            Saved records & PDFs always stay available
+          </Text>
         </View>
       </ScrollView>
 
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          style={[styles.subscribeButton, subscribing && styles.subscribeButtonDisabled]}
+          style={[
+            styles.subscribeButton,
+            subscribing && styles.subscribeButtonDisabled,
+          ]}
           onPress={handleSubscribe}
           disabled={subscribing}
-          activeOpacity={0.85}>
+          activeOpacity={0.85}
+        >
           {subscribing ? (
             <ActivityIndicator color={colors.white} />
           ) : (
             <>
               <UpiIcon size={18} />
-              <Text style={styles.subscribeButtonText}>Subscribe with UPI AutoPay</Text>
+              <Text style={styles.subscribeButtonText}>
+                Subscribe with UPI AutoPay
+              </Text>
             </>
           )}
         </TouchableOpacity>
