@@ -93,3 +93,9 @@ server/uploads/
 
 # Play Store listing kit (local working docs, not shared via source control)
 /play-store/
+
+# Local-only files (machine setup, one-off debug scripts, stray empty files)
+/Configure
+/Task
+/android/node-bin/
+/server/scripts/
