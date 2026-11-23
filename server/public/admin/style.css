@@ -722,6 +722,45 @@ button.secondary:hover {
   color: var(--text-muted);
 }
 
+.free-entries {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid rgba(253, 230, 138, 0.8);
+  border-radius: 10px;
+}
+
+.free-entries-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: #78350f;
+}
+
+.free-entries-count {
+  font-weight: 700;
+  color: #b45309;
+}
+
+.free-entries-track {
+  margin-top: 8px;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(253, 230, 138, 0.8);
+  overflow: hidden;
+}
+
+.free-entries-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: #d97706;
+}
+
+.free-entries-fill.full {
+  background: var(--danger);
+}
+
 .shop-card-footer {
   display: flex;
   align-items: center;

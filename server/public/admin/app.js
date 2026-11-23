@@ -473,14 +473,23 @@
       renewalLabel.textContent = `Cancelled · access until ${formatDate(shop.subscription.expiredOn)}`;
     } else if (status === 'active') {
       renewalLabel.textContent = 'Renews automatically';
+    } else if (status === 'trial') {
+      renewalLabel.textContent = 'Free trial';
     } else {
       renewalLabel.textContent = 'No active plan';
     }
     const paymentLabel = document.createElement('span');
-    paymentLabel.textContent = shop.subscription.paymentMethod || '—';
+    // Older shops carry a placeholder payment method from before Razorpay;
+    // only show one for shops Razorpay has actually charged.
+    const hasPaid = shop.subscription.amount !== null && shop.subscription.amount !== undefined;
+    paymentLabel.textContent = hasPaid ? shop.subscription.paymentMethod || '—' : '—';
     info.appendChild(renewalLabel);
     info.appendChild(paymentLabel);
     card.appendChild(info);
+
+    if (status === 'trial' && shop.freeEntries) {
+      card.appendChild(freeEntriesProgress(shop.freeEntries.used, shop.freeEntries.limit));
+    }
 
     const footer = document.createElement('div');
     footer.className = 'shop-card-footer';
@@ -496,6 +505,31 @@
     card.appendChild(footer);
 
     return card;
+  }
+
+  function freeEntriesProgress(used, limit) {
+    const shown = Math.min(used, limit);
+    const left = Math.max(0, limit - used);
+    const wrap = document.createElement('div');
+    wrap.className = 'free-entries';
+    const row = document.createElement('div');
+    row.className = 'free-entries-row';
+    const label = document.createElement('span');
+    label.textContent = left === 0 ? 'Free limit reached' : `${left} free ${left === 1 ? 'entry' : 'entries'} left`;
+    const count = document.createElement('span');
+    count.className = 'free-entries-count';
+    count.textContent = `${shown} / ${limit} used`;
+    row.appendChild(label);
+    row.appendChild(count);
+    const track = document.createElement('div');
+    track.className = 'free-entries-track';
+    const fill = document.createElement('div');
+    fill.className = left === 0 ? 'free-entries-fill full' : 'free-entries-fill';
+    fill.style.width = `${(shown / limit) * 100}%`;
+    track.appendChild(fill);
+    wrap.appendChild(row);
+    wrap.appendChild(track);
+    return wrap;
   }
 
   // ---------- Payments modal ----------
