@@ -85,12 +85,17 @@ export async function updateShop(req: Request, res: Response) {
   res.json(serializeShopForAdmin(shop));
 }
 
-function serializeSubscriptionForAdmin(shop: InstanceType<typeof Shop>) {
+// Same limit the app's free-trial banner uses: each purchase entry is one
+// Device record, so a shop's device count is its free entries used.
+const FREE_ENTRY_LIMIT = 10;
+
+function serializeSubscriptionForAdmin(shop: InstanceType<typeof Shop>, entriesUsed: number) {
   return {
     id: shop._id.toString(),
     phoneNumber: shop.phoneNumber,
     shopName: shop.shopName,
     profileCompleted: shop.profileCompleted ?? false,
+    freeEntries: { used: entriesUsed, limit: FREE_ENTRY_LIMIT },
     subscription: {
       status: shop.subscription?.status ?? 'trial',
       planId: shop.subscription?.planId ?? null,
@@ -132,8 +137,14 @@ export async function listSubscriptionsAdmin(req: Request, res: Response) {
     }
   }
 
+  const entryCounts = await Device.aggregate([
+    { $match: { shopId: { $in: shops.map(s => s._id) } } },
+    { $group: { _id: '$shopId', count: { $sum: 1 } } },
+  ]);
+  const entriesByShop = new Map(entryCounts.map(row => [String(row._id), row.count as number]));
+
   res.json({
-    shops: shops.map(serializeSubscriptionForAdmin),
+    shops: shops.map(shop => serializeSubscriptionForAdmin(shop, entriesByShop.get(String(shop._id)) ?? 0)),
     summary,
   });
 }
