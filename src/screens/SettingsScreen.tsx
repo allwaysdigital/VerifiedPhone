@@ -162,7 +162,11 @@ export default function SettingsScreen({ navigation }: Props) {
 
   const handleSubscriptionPress = () => {
     const rootNavigation = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
-    if (subscription?.status === 'active') {
+    // An ended *paid* subscription goes to billing too, so past payments stay
+    // visible ("Choose a Plan" is there to resubscribe). `amount` is only set
+    // once Razorpay has actually charged the shop.
+    const hadPaidPlan = subscription?.status === 'expired' && subscription.amount != null;
+    if (subscription?.status === 'active' || hadPaidPlan) {
       rootNavigation?.navigate('ManageSubscription');
     } else {
       rootNavigation?.navigate('SubscriptionPlans');

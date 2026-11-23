@@ -69,9 +69,9 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
     }
   };
 
-  // Subscribers reach this screen via "Switch to Yearly"; a free-entry
-  // counter means nothing to them.
-  const showFreeEntryBanner = subscription?.status !== 'active';
+  // Only meaningful on the free trial — not for subscribers ("Switch to
+  // Yearly") or shops whose paid plan has ended ("Choose a Plan").
+  const showFreeEntryBanner = subscription?.status === 'trial' || subscription?.status === 'none';
   const entriesUsed = Math.min(devices.length, FREE_ENTRY_LIMIT);
   const limitReached = entriesUsed >= FREE_ENTRY_LIMIT;
   const entriesLeft = Math.max(0, FREE_ENTRY_LIMIT - entriesUsed);
