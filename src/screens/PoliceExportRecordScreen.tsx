@@ -3,7 +3,7 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { generatePDF } from 'react-native-html-to-pdf';
-import Share from 'react-native-share';
+import { savePdfToDownloads } from '../native/downloads';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -55,22 +55,15 @@ export default function PoliceExportRecordScreen({ navigation, route }: Props) {
     setIsDownloading(true);
     try {
       const html = buildPoliceExportRecordHtml({ device, shop, recordGenerated });
-      const fileName = `PoliceExportRecord-${device.imei1 || device.id}-${Date.now()}`;
+      const fileName = `PoliceExportRecord-${device.imei1 || device.id}`;
       const { filePath } = await generatePDF({ html, fileName });
-      await Share.open({
-        url: `file://${filePath}`,
-        type: 'application/pdf',
-        filename: fileName,
-        saveToFiles: true,
-      });
+      await savePdfToDownloads(filePath, fileName, 'Record downloaded');
     } catch (error: any) {
-      if (!error?.message?.includes('User did not share')) {
-        console.error('Police export record PDF generation failed:', error);
-        Alert.alert(
-          'Download failed',
-          error?.message ?? 'Could not generate the record PDF. Please try again.',
-        );
-      }
+      console.error('Police export record PDF download failed:', error);
+      Alert.alert(
+        'Download failed',
+        error?.message ?? 'Could not save the record PDF. Please try again.',
+      );
     } finally {
       setIsDownloading(false);
     }

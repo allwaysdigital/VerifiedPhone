@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { generatePDF } from 'react-native-html-to-pdf';
+import { savePdfToDownloads } from '../native/downloads';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
@@ -19,6 +30,7 @@ import {
 import { PLANS, formatSubscriptionDate } from '../types/domain';
 import { useShopData } from '../context/ShopDataContext';
 import { listInvoices, type Invoice } from '../api/subscription';
+import { buildSubscriptionInvoiceHtml, subscriptionInvoiceFileName } from '../utils/subscriptionInvoice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ManageSubscription'>;
 
@@ -29,6 +41,26 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
   const [cancelling, setCancelling] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(true);
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
+
+  const handleDownloadInvoice = async (invoice: Invoice) => {
+    setDownloadingInvoiceId(invoice.id);
+    try {
+      const fileName = subscriptionInvoiceFileName(invoice);
+      const { filePath } = await generatePDF({
+        html: buildSubscriptionInvoiceHtml(invoice, shop),
+        fileName,
+      });
+      await savePdfToDownloads(filePath, fileName, 'Invoice downloaded');
+    } catch (error: any) {
+      Alert.alert(
+        'Download failed',
+        error?.message ?? 'Could not save the invoice PDF. Please try again.',
+      );
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  };
 
   useEffect(() => {
     listInvoices()
@@ -40,6 +72,7 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
   const plan = subscription?.planId ? PLANS[subscription.planId] : null;
   const isTrial = subscription?.status === 'trial';
   const isActive = subscription?.status === 'active';
+  const isEnded = subscription?.status === 'expired';
   const hasAccess = isTrial || isActive;
   // Active subs renew on renewsOn (set by the Razorpay webhook on each
   // charge); trials renew/expire on trialEndsAt — different fields because
@@ -56,6 +89,8 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
     ? `Cancelled · access until ${accessUntil}`
     : hasAccess
     ? `Renews on ${renewDate}${plan ? ` · ₹${price.toLocaleString('en-IN')}` : ''}`
+    : isEnded && subscription?.expiredOn
+    ? `Ended on ${accessUntil}`
     : 'No upcoming renewal';
 
   const handleConfirmCancel = async () => {
@@ -91,7 +126,9 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
                 </View>
               </View>
               <Text style={styles.planHeading}>
-                {plan ? `${isActive ? 'Active' : 'Trial'} · ${plan.tierName}` : 'No plan selected'}
+                {plan
+                  ? `${isActive ? 'Active' : isTrial ? 'Trial' : 'Ended'} · ${plan.tierName}`
+                  : 'No plan selected'}
               </Text>
             </View>
             {plan ? (
@@ -213,9 +250,18 @@ export default function ManageSubscriptionScreen({ navigation }: Props) {
                     ₹{invoice.amount}
                   </Text>
                   {invoice.status === 'paid' ? (
-                    <TouchableOpacity style={styles.gstButton}>
-                      <DownloadIcon size={12} />
-                      <Text style={styles.gstButtonText}>GST</Text>
+                    <TouchableOpacity
+                      style={styles.invoiceButton}
+                      onPress={() => handleDownloadInvoice(invoice)}
+                      disabled={downloadingInvoiceId !== null}>
+                      {downloadingInvoiceId === invoice.id ? (
+                        <ActivityIndicator size="small" color="#d97706" />
+                      ) : (
+                        <>
+                          <DownloadIcon size={12} />
+                          <Text style={styles.invoiceButtonText}>Invoice</Text>
+                        </>
+                      )}
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -557,17 +603,19 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     textDecorationLine: 'line-through',
   },
-  gstButton: {
+  invoiceButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
+    minWidth: 76,
     borderWidth: 1,
     borderColor: 'rgba(253,230,138,0.6)',
     borderRadius: 8,
     paddingHorizontal: 7,
     paddingVertical: 7,
   },
-  gstButtonText: {
+  invoiceButtonText: {
     fontFamily: fonts.robotoRegular,
     fontSize: 11,
     color: '#d97706',
