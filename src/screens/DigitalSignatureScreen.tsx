@@ -1,8 +1,10 @@
 import React, { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -14,6 +16,7 @@ import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { FormCheckbox } from '../components/FormControls';
 import SignaturePad, { SignaturePadHandle } from '../components/SignaturePad';
 import { useShopData } from '../context/ShopDataContext';
+import { savingLabel } from '../utils/upload';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DigitalSignature'>;
 
@@ -24,6 +27,7 @@ export default function DigitalSignatureScreen({ navigation, route }: Props) {
   const [confirmed, setConfirmed] = useState(false);
   const [signatureEmpty, setSignatureEmpty] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState('');
   const padRef = useRef<SignaturePadHandle>(null);
 
@@ -36,6 +40,7 @@ export default function DigitalSignatureScreen({ navigation, route }: Props) {
     }
     setSaving(true);
     setError('');
+    setUploadProgress(null);
     try {
       await createDevice({
         brand: purchaseData.brand,
@@ -61,12 +66,14 @@ export default function DigitalSignatureScreen({ navigation, route }: Props) {
         sellerPhotoUri: purchaseData.sellerPhoto,
         aadhaarFrontUri: purchaseData.aadhaarFront,
         aadhaarBackUri: purchaseData.aadhaarBack,
-      });
+      }, setUploadProgress);
+      ToastAndroid.show('Purchase saved', ToastAndroid.SHORT);
       navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
-    } catch (err) {
-      setError('Could not save this purchase. Please try again.');
+    } catch {
+      setError('Could not save this purchase. Please check your connection and try again.');
     } finally {
       setSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -108,7 +115,8 @@ export default function DigitalSignatureScreen({ navigation, route }: Props) {
             style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
             onPress={handleSaveSeller}
             disabled={!canSave}>
-            <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save Seller'}</Text>
+            {saving ? <ActivityIndicator size="small" color={colors.white} /> : null}
+            <Text style={styles.saveButtonText}>{saving ? savingLabel(uploadProgress) : 'Save Seller'}</Text>
           </TouchableOpacity>
         </View>
         {!isDeclarationComplete ? (
@@ -203,6 +211,8 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     backgroundColor: colors.primary,
+    flexDirection: 'row',
+    gap: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

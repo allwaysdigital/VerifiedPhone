@@ -10,11 +10,14 @@ import { subscribeToAuthState } from '../auth/session';
 import { createBrand as apiCreateBrand, listBrands } from '../api/brands';
 import {
   createDevice as apiCreateDevice,
+  updateDevice as apiUpdateDevice,
   listDevices,
   markDeviceSold as apiMarkDeviceSold,
   type DeviceCreateInput,
+  type DeviceUpdateInput,
   type MarkDeviceSoldInput,
 } from '../api/devices';
+import type { UploadProgress } from '../api/client';
 import {
   getMyShop,
   registerShop as apiRegisterShop,
@@ -35,7 +38,8 @@ export type ShopDataState = {
   loading: boolean;
   error: string | null;
   refetchAll: () => Promise<void>;
-  createDevice: (input: DeviceCreateInput) => Promise<Device>;
+  createDevice: (input: DeviceCreateInput, onProgress?: UploadProgress) => Promise<Device>;
+  updateDevice: (id: string, input: DeviceUpdateInput, onProgress?: UploadProgress) => Promise<Device>;
   markDeviceSold: (id: string, input: MarkDeviceSoldInput) => Promise<Device>;
   createBrand: (name: string) => Promise<Brand>;
   registerShop: (input: ShopDetailsInput) => Promise<Shop>;
@@ -88,11 +92,20 @@ export function ShopDataProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, [fetchAll]);
 
-  const createDevice = useCallback(async (input: DeviceCreateInput) => {
-    const device = await apiCreateDevice(input);
+  const createDevice = useCallback(async (input: DeviceCreateInput, onProgress?: UploadProgress) => {
+    const device = await apiCreateDevice(input, onProgress);
     setDevices(prev => [device, ...prev]);
     return device;
   }, []);
+
+  const updateDevice = useCallback(
+    async (id: string, input: DeviceUpdateInput, onProgress?: UploadProgress) => {
+      const updated = await apiUpdateDevice(id, input, onProgress);
+      setDevices(prev => prev.map(d => (d.id === id ? updated : d)));
+      return updated;
+    },
+    [],
+  );
 
   const markDeviceSold = useCallback(async (id: string, input: MarkDeviceSoldInput) => {
     const updated = await apiMarkDeviceSold(id, input);
@@ -142,6 +155,7 @@ export function ShopDataProvider({ children }: { children: React.ReactNode }) {
       error,
       refetchAll: fetchAll,
       createDevice,
+      updateDevice,
       markDeviceSold,
       createBrand,
       registerShop,
@@ -158,6 +172,7 @@ export function ShopDataProvider({ children }: { children: React.ReactNode }) {
       error,
       fetchAll,
       createDevice,
+      updateDevice,
       markDeviceSold,
       createBrand,
       registerShop,

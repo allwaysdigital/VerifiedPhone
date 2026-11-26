@@ -3,7 +3,13 @@ import { requireAuth } from '../middleware/requireAuth';
 import { resolveShop } from '../middleware/resolveShop';
 import { upload } from '../upload/multerConfig';
 import { asyncHandler } from '../utils/asyncHandler';
-import { createDevice, getDevice, listDevices, markDeviceSold } from '../controllers/devices.controller';
+import {
+  createDevice,
+  getDevice,
+  listDevices,
+  markDeviceSold,
+  updateDevice,
+} from '../controllers/devices.controller';
 
 const router = Router();
 
@@ -30,6 +36,13 @@ router.post(
   asyncHandler(resolveShop),
   purchaseImages,
   asyncHandler(createDevice),
+);
+router.put(
+  '/:id',
+  requireAuth,
+  asyncHandler(resolveShop),
+  purchaseImages,
+  asyncHandler(updateDevice),
 );
 router.patch(
   '/:id',

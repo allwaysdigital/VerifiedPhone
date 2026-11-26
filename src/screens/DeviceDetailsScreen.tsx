@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Modal,
@@ -21,6 +23,9 @@ import { useShopData } from '../context/ShopDataContext';
 import Badge from '../components/Badge';
 import BackButton from '../components/BackButton';
 import UploadIcon from '../assets/icons/upload_icon.svg';
+import { generatePDF } from 'react-native-html-to-pdf';
+import { savePdfToDownloads } from '../native/downloads';
+import { buildConsentLetterHtml, consentLetterFileName } from '../utils/consentLetter';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DeviceDetails'>;
 
@@ -74,9 +79,12 @@ function DocumentThumb({
 
 export default function DeviceDetailsScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const { devices } = useShopData();
+  const { devices, shop } = useShopData();
   const device = devices.find(d => d.id === route.params.deviceId);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<CarouselImage[] | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [exportingConsent, setExportingConsent] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const { width: windowWidth } = useWindowDimensions();
   const carouselWidth = windowWidth - 32; // matches scrollContent's 16px horizontal padding
@@ -121,7 +129,48 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
     navigation.navigate('AddSale', { deviceId: device.id });
   };
 
-  const handleDownloadInvoice = () => {
+  // Every image uploaded for this phone, in one swipeable full-screen viewer.
+  const handleViewDocuments = () => {
+    const images = [
+      { key: 'front', label: 'Phone Front', uri: device.phoneFrontImageUrl },
+      { key: 'back', label: 'Phone Back', uri: device.phoneBackImageUrl },
+      { key: 'bill', label: 'Old Bill', uri: device.oldPhoneBillUrl },
+      { key: 'seller', label: 'Seller Photo', uri: device.sellerPhotoUrl },
+      { key: 'aadhaarFront', label: 'Aadhaar Front', uri: device.aadhaarFrontUrl },
+      { key: 'aadhaarBack', label: 'Aadhaar Back', uri: device.aadhaarBackUrl },
+      { key: 'buyer', label: 'Buyer Photo', uri: device.buyerPhotoUrl },
+      { key: 'buyerAadhaarFront', label: 'Buyer Aadhaar Front', uri: device.buyerAadhaarFrontUrl },
+      { key: 'buyerAadhaarBack', label: 'Buyer Aadhaar Back', uri: device.buyerAadhaarBackUrl },
+    ].filter((item): item is CarouselImage => !!item.uri);
+    if (images.length === 0) {
+      Alert.alert('No documents', 'No photos or documents were uploaded for this phone.');
+      return;
+    }
+    setGalleryIndex(0);
+    setGallery(images);
+  };
+
+  const handleExportConsentLetter = async () => {
+    if (exportingConsent) {
+      return;
+    }
+    setExportingConsent(true);
+    try {
+      const fileName = consentLetterFileName(device);
+      const generatedAt = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+      const { filePath } = await generatePDF({
+        html: buildConsentLetterHtml(device, shop, generatedAt),
+        fileName,
+      });
+      await savePdfToDownloads(filePath, fileName, 'Consent letter downloaded');
+    } catch (error: any) {
+      Alert.alert('Download failed', error?.message ?? 'Could not create the consent letter. Please try again.');
+    } finally {
+      setExportingConsent(false);
+    }
+  };
+
+  const handleViewInvoice = () => {
     navigation.navigate('InvoicePreview', {
       deviceId: device.id,
       customerName: device.buyerName ?? '',
@@ -137,7 +186,11 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
       <View style={styles.headerRow}>
         <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>Device Details</Text>
-        <TouchableOpacity hitSlop={12}>
+        <TouchableOpacity
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Edit purchase"
+          onPress={() => navigation.navigate('AddPurchase', { deviceId: device.id })}>
           <Text style={styles.editIcon}>✎</Text>
         </TouchableOpacity>
       </View>
@@ -271,8 +324,16 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
             {/* Once sold, this field holds the real purchase-vs-sale-price
                 profit, not the purchase-time estimate — label it as such. */}
             <Text style={styles.priceLabel}>{isSold ? 'Actual Profit' : 'Expected Profit'}</Text>
-            <Text style={styles.profitValue}>
-              ₹{device.profit.toLocaleString('en-IN')} ({device.profitPercent}%)
+            <Text
+              style={[
+                styles.profitValue,
+                {
+                  color:
+                    device.profit > 0 ? colors.greenDark : device.profit < 0 ? colors.danger : colors.textMuted,
+                },
+              ]}>
+              {device.profit < 0 ? '-' : ''}₹{Math.abs(device.profit).toLocaleString('en-IN')} (
+              {device.profitPercent}%)
             </Text>
           </View>
         </View>
@@ -376,26 +437,35 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
               <UploadIcon width={18} height={18} />
               <Text style={styles.outlineButtonText}>Police Export Record</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.outlineButton} onPress={handleDownloadInvoice}>
+            <TouchableOpacity style={styles.outlineButton} onPress={handleViewInvoice}>
               <UploadIcon width={18} height={18} />
-              <Text style={styles.outlineButtonText}>Download Invoice</Text>
+              <Text style={styles.outlineButtonText}>View Invoice</Text>
             </TouchableOpacity>
           </>
         ) : (
-          <>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleMarkAsSold}>
-              <Text style={styles.primaryButtonText}>Mark as sold</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.outlineButton}>
-              <UploadIcon width={18} height={18} />
-              <Text style={styles.outlineButtonText}>Export Consent Letter</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.outlineButton}>
-              <UploadIcon width={18} height={18} />
-              <Text style={styles.outlineButtonText}>View Documents</Text>
-            </TouchableOpacity>
-          </>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleMarkAsSold}>
+            <Text style={styles.primaryButtonText}>Mark as sold</Text>
+          </TouchableOpacity>
         )}
+        {/* Available before and after the sale — the seller's consent belongs
+            to the purchase, whatever happened to the phone since. */}
+        <TouchableOpacity
+          style={styles.outlineButton}
+          onPress={handleExportConsentLetter}
+          disabled={exportingConsent}>
+          {exportingConsent ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <UploadIcon width={18} height={18} />
+          )}
+          <Text style={styles.outlineButtonText}>
+            {exportingConsent ? 'Preparing PDF…' : 'Export Consent Letter'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.outlineButton} onPress={handleViewDocuments}>
+          <UploadIcon width={18} height={18} />
+          <Text style={styles.outlineButtonText}>View Documents</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Shared full-screen viewer — opened by tapping either a carousel
@@ -413,6 +483,40 @@ export default function DeviceDetailsScreen({ navigation, route }: Props) {
             <Image source={{ uri: previewUri }} style={styles.previewImage} resizeMode="contain" />
           ) : null}
         </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={!!gallery}
+        animationType="fade"
+        onRequestClose={() => setGallery(null)}>
+        <View style={styles.galleryContainer}>
+          <View style={styles.galleryHeader}>
+            <Text style={styles.galleryTitle}>
+              {gallery ? `${gallery[galleryIndex]?.label} · ${galleryIndex + 1} of ${gallery.length}` : ''}
+            </Text>
+            <TouchableOpacity onPress={() => setGallery(null)} hitSlop={12}>
+              <Text style={styles.galleryClose}>Close</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={gallery ?? []}
+            keyExtractor={item => item.key}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            // Track the live position, not just momentum end: a slow drag that
+            // snaps to the next page doesn't always fire onMomentumScrollEnd.
+            scrollEventThrottle={16}
+            onScroll={e =>
+              setGalleryIndex(Math.round(e.nativeEvent.contentOffset.x / windowWidth))
+            }
+            renderItem={({ item }) => (
+              <View style={[styles.gallerySlide, { width: windowWidth }]}>
+                <Image source={{ uri: item.uri }} style={styles.galleryImage} resizeMode="contain" />
+              </View>
+            )}
+          />
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -597,7 +701,6 @@ const styles = StyleSheet.create({
   profitValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.danger,
   },
   sellerValue: {
     fontSize: 15,
@@ -711,5 +814,36 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '80%',
+  },
+  galleryContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  galleryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 48,
+    paddingBottom: 12,
+  },
+  galleryTitle: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  galleryClose: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  gallerySlide: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryImage: {
+    width: '100%',
+    height: '85%',
   },
 });

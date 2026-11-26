@@ -9,6 +9,7 @@ import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { PLANS } from '../types/domain';
 import { checkRazorpaySubscription, getSubscription, listInvoices, type Invoice } from '../api/subscription';
 import { useShopData } from '../context/ShopDataContext';
+import { APP_NAME } from '../constants/app';
 import { resetToPaymentSuccess } from '../navigation/paymentSuccess';
 import SubscriptionHeader from '../components/SubscriptionHeader';
 import {
@@ -332,6 +333,7 @@ export default function PaymentStatusScreen(props: Props) {
   const { navigation, route } = props;
   const { status } = route.params;
   useScreenStatusBar('light-content', colors.headerGradientStart);
+  const { shop } = useShopData();
 
   const isSuccess = status === 'success';
 
@@ -340,7 +342,7 @@ export default function PaymentStatusScreen(props: Props) {
       {isSuccess ? (
         <SubscriptionHeader
           variant="tall"
-          title="Mobile Hub"
+          title={shop?.shopName || APP_NAME}
           subtitle={
             <>
               VERIFIED <Text style={styles.wordmarkBold}>PHONE</Text> — DEALER SATHI

@@ -1,4 +1,4 @@
-import { request, requestForm, imageFieldToFormFile } from './client';
+import { request, requestForm, imageFieldToFormFile, type UploadProgress } from './client';
 import { resolveUrl } from './config';
 import type { Device, DeviceStatus } from '../types/domain';
 
@@ -45,6 +45,7 @@ type RawDevice = {
   salePrice: number | null;
   warrantyPeriod: string | null;
   soldAt: string | null;
+  invoiceNumber: string | null;
 };
 
 function formatDate(iso: string): string {
@@ -106,6 +107,7 @@ function toClientDevice(raw: RawDevice): Device {
     buyerAadhaarBackUrl: resolveUrl(raw.buyerAadhaarBackUrl),
     salePrice: raw.salePrice ?? undefined,
     warrantyPeriod: raw.warrantyPeriod ?? undefined,
+    invoiceNumber: raw.invoiceNumber ?? undefined,
   };
 }
 
@@ -146,8 +148,8 @@ export type DeviceCreateInput = {
   aadhaarBackUri: string | null;
 };
 
-export async function createDevice(input: DeviceCreateInput): Promise<Device> {
-  const raw = await requestForm<RawDevice>('/api/devices', {
+function purchaseFormFields(input: DeviceCreateInput): Record<string, unknown> {
+  return {
     brand: input.brand,
     model: input.model,
     color: input.color,
@@ -171,6 +173,43 @@ export async function createDevice(input: DeviceCreateInput): Promise<Device> {
     sellerPhoto: imageFieldToFormFile(input.sellerPhotoUri),
     aadhaarFront: imageFieldToFormFile(input.aadhaarFrontUri),
     aadhaarBack: imageFieldToFormFile(input.aadhaarBackUri),
+  };
+}
+
+export async function createDevice(
+  input: DeviceCreateInput,
+  onProgress?: UploadProgress,
+): Promise<Device> {
+  const raw = await requestForm<RawDevice>('/api/devices', purchaseFormFields(input), { onProgress });
+  return toClientDevice(raw);
+}
+
+export type DeviceUpdateInput = Omit<DeviceCreateInput, 'sellerDeclarationConfirmed'>;
+
+export function removedOptionalImages(input: DeviceUpdateInput): string[] {
+  const optional: [string, string | null][] = [
+    ['phoneBackImage', input.phoneBackImageUri],
+    ['oldPhoneBill', input.oldPhoneBillUri],
+    ['sellerPhoto', input.sellerPhotoUri],
+  ];
+  return optional.filter(([, uri]) => !uri).map(([field]) => field);
+}
+
+// Edits a purchase. Photo URIs that are already http(s) URLs are not
+// re-sent, so the server keeps those photos and only replaces changed ones.
+export async function updateDevice(
+  id: string,
+  input: DeviceUpdateInput,
+  onProgress?: UploadProgress,
+): Promise<Device> {
+  // The declaration was recorded at purchase time; an edit must not change it.
+  const fields = purchaseFormFields({ ...input, sellerDeclarationConfirmed: false });
+  delete fields.sellerDeclarationConfirmed;
+  // Optional photos the dealer removed; the server clears them.
+  fields.removeImages = removedOptionalImages(input);
+  const raw = await requestForm<RawDevice>(`/api/devices/${id}`, fields, {
+    method: 'PUT',
+    onProgress,
   });
   return toClientDevice(raw);
 }

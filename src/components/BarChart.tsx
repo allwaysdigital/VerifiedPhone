@@ -14,6 +14,7 @@ type Props = {
   series: ChartSeries[];
   yMax: number;
   yStep: number;
+  formatTick?: (value: number) => string;
 };
 
 const CHART_HEIGHT = 200;
@@ -22,7 +23,7 @@ const TOP_PADDING = 10;
 const BOTTOM_AXIS_HEIGHT = 24;
 const BAR_GAP = 3;
 
-export default function BarChart({ categories, series, yMax, yStep }: Props) {
+export default function BarChart({ categories, series, yMax, yStep, formatTick = String }: Props) {
   const [width, setWidth] = useState(0);
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -37,8 +38,8 @@ export default function BarChart({ categories, series, yMax, yStep }: Props) {
       : 0;
 
   const ticks: number[] = [];
-  for (let v = 0; v <= yMax; v += yStep) {
-    ticks.push(v);
+  for (let i = 0; i * yStep <= yMax; i += 1) {
+    ticks.push(i * yStep);
   }
 
   const yForValue = (v: number) => CHART_HEIGHT - (v / yMax) * CHART_HEIGHT;
@@ -67,7 +68,7 @@ export default function BarChart({ categories, series, yMax, yStep }: Props) {
                   fontSize={11}
                   fill={colors.textFaint}
                   textAnchor="end">
-                  {t}
+                  {formatTick(t)}
                 </SvgText>
               </G>
             );

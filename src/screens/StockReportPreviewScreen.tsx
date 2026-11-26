@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { generatePDF } from 'react-native-html-to-pdf';
-import Share from 'react-native-share';
+import { savePdfToDownloads } from '../native/downloads';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -163,22 +163,12 @@ export default function StockReportPreviewScreen({ navigation, route }: Props) {
     setIsDownloading(true);
     try {
       const html = buildStockReportHtml({ devices: reportDevices, filterLabel, shop, generatedAt, brand });
-      const fileName = `StockReport-${Date.now()}`;
+      const fileName = `StockReport-${new Date().toISOString().slice(0, 10)}`;
       const { filePath } = await generatePDF({ html, fileName });
-      await Share.open({
-        url: `file://${filePath}`,
-        type: 'application/pdf',
-        filename: fileName,
-        saveToFiles: true,
-      });
+      await savePdfToDownloads(filePath, fileName, 'Report downloaded');
     } catch (error: any) {
-      if (!error?.message?.includes('User did not share')) {
-        console.error('Stock report PDF generation failed:', error);
-        Alert.alert(
-          'Download failed',
-          error?.message ?? 'Could not generate the stock report PDF. Please try again.',
-        );
-      }
+      console.error('Stock report PDF generation failed:', error);
+      Alert.alert('Download failed', error?.message ?? 'Could not save the stock report PDF. Please try again.');
     } finally {
       setIsDownloading(false);
     }

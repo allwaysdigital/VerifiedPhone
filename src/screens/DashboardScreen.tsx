@@ -9,8 +9,9 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
-import { SHOP_NAME } from '../constants/app';
-import { formatINR, formatLakhs } from '../utils/format';
+import { APP_NAME } from '../constants/app';
+import { formatINR } from '../utils/format';
+import { brandDistribution, stockSummary, type BrandRow } from '../utils/dashboard';
 import EmptyState from '../components/EmptyState';
 import FinalNudgeBottomSheet from '../components/FinalNudgeBottomSheet';
 import HeaderLogo from '../assets/icons/header_logo.svg';
@@ -41,7 +42,11 @@ function StatCard({ label, value, caption, valueColor, iconBg, icon, onPress }: 
       <View style={[styles.statIconWrap, { backgroundColor: iconBg }]}>{icon}</View>
       <Text style={styles.statLabel}>{label}</Text>
       <Text style={[styles.statValue, { color: valueColor }]}>{value}</Text>
-      {caption ? <Text style={styles.statCaption}>{caption}</Text> : null}
+      {caption ? (
+        <Text style={styles.statCaption} numberOfLines={1}>
+          {caption}
+        </Text>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -69,8 +74,6 @@ function QuickAction({ label, iconBg, icon, round, onPress }: QuickActionProps) 
     </TouchableOpacity>
   );
 }
-
-type BrandRow = { brand: string; units: string; value: string; deviceIds: string[] };
 
 function todayLabel(): string {
   const d = new Date();
@@ -102,6 +105,7 @@ export default function DashboardScreen({ navigation }: Props) {
     const todayProfitTotal = soldToday.reduce((sum, d) => sum + d.profit, 0);
     return {
       availableCount,
+      stockSummary: stockSummary(devices),
       purchasedTodayCount: purchasedToday.length,
       soldTodayCount: soldToday.length,
       todayPurchaseTotal,
@@ -110,24 +114,7 @@ export default function DashboardScreen({ navigation }: Props) {
     };
   }, [devices, today]);
 
-  const brandDistribution = useMemo<BrandRow[]>(() => {
-    const byBrand = new Map<string, { units: number; value: number; deviceIds: string[] }>();
-    devices.forEach(device => {
-      const entry = byBrand.get(device.brand) ?? { units: 0, value: 0, deviceIds: [] };
-      entry.units += 1;
-      entry.value += device.purchasePrice;
-      entry.deviceIds.push(device.id);
-      byBrand.set(device.brand, entry);
-    });
-    return Array.from(byBrand.entries())
-      .map(([brand, { units, value, deviceIds }]) => ({
-        brand,
-        units: `${units} unit${units === 1 ? '' : 's'}`,
-        value: formatLakhs(value),
-        deviceIds,
-      }))
-      .sort((a, b) => a.brand.localeCompare(b.brand));
-  }, [devices]);
+  const brandRows = useMemo(() => brandDistribution(devices), [devices]);
 
   const handleBrandRowPress = (row: BrandRow) => {
     if (row.deviceIds.length === 1) {
@@ -144,7 +131,7 @@ export default function DashboardScreen({ navigation }: Props) {
           <View style={styles.headerLogoRow}>
             <HeaderLogo width={32} height={32} />
             <View>
-              <Text style={styles.headerTitle}>{shop?.shopName || SHOP_NAME}</Text>
+              <Text style={styles.headerTitle}>{shop?.shopName || APP_NAME}</Text>
               <Text style={styles.headerWordmark}>
                 VERIFIED <Text style={styles.headerWordmarkBold}>PHONE</Text> — DEALER SATHI
               </Text>
@@ -158,7 +145,7 @@ export default function DashboardScreen({ navigation }: Props) {
           <StatCard
             label="Total Stock"
             value={String(stats.availableCount)}
-            caption="Brand & Model :"
+            caption={stats.stockSummary}
             valueColor={colors.primary}
             iconBg={colors.primary}
             icon={<StockBoxIcon width={32} height={32} />}
@@ -211,11 +198,11 @@ export default function DashboardScreen({ navigation }: Props) {
         </View>
 
         <Text style={styles.sectionTitle}>Brand-wise Distribution</Text>
-        {brandDistribution.length === 0 ? (
+        {brandRows.length === 0 ? (
           <EmptyState message="No stock yet" />
         ) : (
           <View style={styles.brandCard}>
-            {brandDistribution.map(row => (
+            {brandRows.map(row => (
               <TouchableOpacity
                 key={row.brand}
                 activeOpacity={0.7}

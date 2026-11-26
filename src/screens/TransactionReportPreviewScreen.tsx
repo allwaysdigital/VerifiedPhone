@@ -3,7 +3,7 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { generatePDF } from 'react-native-html-to-pdf';
-import Share from 'react-native-share';
+import { savePdfToDownloads } from '../native/downloads';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -136,22 +136,12 @@ export default function TransactionReportPreviewScreen({ navigation, route }: Pr
         filterLabel,
         generatedAt,
       });
-      const fileName = `${meta.title.replace(/\s+/g, '')}-${Date.now()}`;
+      const fileName = `${meta.title.replace(/\s+/g, '')}-${new Date().toISOString().slice(0, 10)}`;
       const { filePath } = await generatePDF({ html, fileName });
-      await Share.open({
-        url: `file://${filePath}`,
-        type: 'application/pdf',
-        filename: fileName,
-        saveToFiles: true,
-      });
+      await savePdfToDownloads(filePath, fileName, 'Report downloaded');
     } catch (error: any) {
-      if (!error?.message?.includes('User did not share')) {
-        console.error('Transaction report PDF generation failed:', error);
-        Alert.alert(
-          'Download failed',
-          error?.message ?? 'Could not generate the report PDF. Please try again.',
-        );
-      }
+      console.error('Transaction report PDF generation failed:', error);
+      Alert.alert('Download failed', error?.message ?? 'Could not save the report PDF. Please try again.');
     } finally {
       setIsDownloading(false);
     }

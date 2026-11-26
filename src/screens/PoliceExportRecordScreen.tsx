@@ -11,16 +11,14 @@ import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import BackButton from '../components/BackButton';
 import InvoiceIcon from '../assets/icons/invoice_icon.svg';
 import { useShopData } from '../context/ShopDataContext';
-import { buildPoliceExportRecordHtml } from '../utils/policeExportRecord';
+import { deviceName } from '../utils/format';
+import {
+  buildPoliceExportRecordHtml,
+  imeiStatus,
+  verificationRows,
+} from '../utils/policeExportRecord';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PoliceExportRecord'>;
-
-const VERIFICATION_DOCUMENTS = [
-  { label: 'Aadhaar Card (Front & Back)', status: 'Verified' },
-  { label: 'Seller Live Photo', status: 'Captured' },
-  { label: 'Digital Signature', status: 'Signed' },
-  { label: 'Device Images', status: 'Uploaded' },
-];
 
 function DeviceField({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
@@ -108,16 +106,12 @@ export default function PoliceExportRecordScreen({ navigation, route }: Props) {
 
           <Text style={styles.sectionTitle}>Device Information</Text>
           <View style={styles.infoBox}>
-            <DeviceField label="Brand & Model :" value={device.model} />
+            <DeviceField label="Brand & Model :" value={deviceName(device)} />
             <DeviceField label="IMEI 1 :" value={device.imei1} />
             <DeviceField label="Color :" value={device.color} />
             <DeviceField label="Storage :" value={device.storage} />
             <DeviceField label="Purchase Date :" value={device.purchaseDate} />
-            <DeviceField
-              label="IMEI Status :"
-              value={device.verification}
-              valueColor={device.verification === 'Verified' ? colors.green : colors.danger}
-            />
+            <DeviceField label="IMEI Status :" value={imeiStatus(device)} valueColor={colors.textMuted} />
           </View>
 
           <Text style={styles.sectionTitle}>Seller Information</Text>
@@ -138,23 +132,29 @@ export default function PoliceExportRecordScreen({ navigation, route }: Props) {
           </View>
 
           <Text style={styles.sectionTitle}>Verification Documents</Text>
-          {VERIFICATION_DOCUMENTS.map(doc => (
-            <View key={doc.label} style={styles.docRow}>
-              <Text style={styles.docLabel}>✓ {doc.label}</Text>
-              <Text style={styles.docStatus}>{doc.status}</Text>
+          {verificationRows(device).map(doc => (
+            <View key={doc.label} style={[styles.docRow, !doc.provided && styles.docRowMissing]}>
+              <Text style={[styles.docLabel, !doc.provided && styles.docLabelMissing]}>
+                {doc.provided ? '✓' : '✗'} {doc.label}
+              </Text>
+              <Text style={[styles.docStatus, !doc.provided && styles.docStatusMissing]}>{doc.status}</Text>
             </View>
           ))}
 
           <Text style={styles.sectionTitle}>Legal Declaration</Text>
-          <View style={styles.declarationBox}>
-            <Text style={styles.declarationText}>
-              ✓ Seller has declared that this device is legally owned and not stolen, lost, or
-              involved in any illegal activity.
-            </Text>
-            <Text style={styles.declarationDate}>
-              Declaration Date: {device.declarationDate ?? device.purchaseDate}
-            </Text>
-          </View>
+          {device.declarationDate ? (
+            <View style={styles.declarationBox}>
+              <Text style={styles.declarationText}>
+                ✓ Seller has declared that this device is legally owned and not stolen, lost, or
+                involved in any illegal activity.
+              </Text>
+              <Text style={styles.declarationDate}>Declaration Date: {device.declarationDate}</Text>
+            </View>
+          ) : (
+            <View style={[styles.declarationBox, styles.declarationBoxMissing]}>
+              <Text style={styles.docLabelMissing}>No seller declaration was recorded for this purchase.</Text>
+            </View>
+          )}
 
           <Text style={styles.sectionTitle}>Record Timestamp</Text>
           <View style={styles.timestampBox}>
@@ -309,6 +309,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.blue,
+  },
+  docRowMissing: {
+    backgroundColor: '#f3f4f6',
+  },
+  docLabelMissing: {
+    color: colors.textMuted,
+  },
+  docStatusMissing: {
+    color: colors.danger,
+  },
+  declarationBoxMissing: {
+    backgroundColor: '#f3f4f6',
   },
   declarationBox: {
     backgroundColor: 'rgba(52,199,89,0.12)',
