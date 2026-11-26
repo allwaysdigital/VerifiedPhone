@@ -16,9 +16,30 @@ import type { Device } from '../types/domain';
 type Props = NativeStackScreenProps<RootStackParamList, 'InvoicePreview'>;
 
 const DEFAULT_SHOP_NAME = 'Mobile Hub';
-const SHOP_ADDRESS = '123 Main Street, Mumbai, Maharashtra - 400001';
-const SHOP_CONTACT = '+91 98765 43210';
-const SHOP_GST = '27AABCU9603R1ZM';
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Shop header lines from Settings → Shop Details; empty fields are left out.
+function shopHeaderLines(shop: { address?: string; contactNumber?: string; gstNumber?: string } | null) {
+  const lines: string[] = [];
+  if (shop?.address?.trim()) {
+    lines.push(shop.address.trim());
+  }
+  if (shop?.contactNumber?.trim()) {
+    lines.push(`Contact: ${shop.contactNumber.trim()}`);
+  }
+  if (shop?.gstNumber?.trim()) {
+    lines.push(`GST: ${shop.gstNumber.trim()}`);
+  }
+  return lines;
+}
 
 const TERMS = [
   'No returns or exchanges after purchase',
@@ -33,6 +54,7 @@ function formatDate(date: Date): string {
 
 function buildInvoiceHtml(params: {
   shopName: string;
+  shopLines: string[];
   invoiceNumber: string;
   invoiceDate: string;
   device: Device;
@@ -42,8 +64,12 @@ function buildInvoiceHtml(params: {
   salePrice: number;
   warrantyPeriod: string;
 }): string {
-  const { shopName, invoiceNumber, invoiceDate, device, customerName, customerMobile, customerAddress, salePrice, warrantyPeriod } =
-    params;
+  const { shopLines, invoiceNumber, invoiceDate, device, salePrice } = params;
+  const shopName = escapeHtml(params.shopName);
+  const customerName = escapeHtml(params.customerName);
+  const customerMobile = escapeHtml(params.customerMobile);
+  const customerAddress = escapeHtml(params.customerAddress);
+  const warrantyPeriod = escapeHtml(params.warrantyPeriod);
   const formattedPrice = `₹${salePrice.toLocaleString('en-IN')}`;
 
   return `
@@ -77,9 +103,7 @@ function buildInvoiceHtml(params: {
       <body>
         <div class="header">
           <h1>${shopName}</h1>
-          <p>${SHOP_ADDRESS}</p>
-          <p>Contact: ${SHOP_CONTACT}</p>
-          <p>GST: ${SHOP_GST}</p>
+          ${shopLines.map(line => `<p>${escapeHtml(line)}</p>`).join('')}
         </div>
         <div class="body">
           <div class="meta-row">
@@ -96,10 +120,10 @@ function buildInvoiceHtml(params: {
 
           <h2>Product Details</h2>
           <div class="box">
-            <p><span class="label">Brand & Model:</span> ${device.model}</p>
-            <p><span class="label">IMEI:</span> ${device.imei1}</p>
-            <p><span class="label">Storage:</span> ${device.storage}</p>
-            <p><span class="label">Color:</span> ${device.color}</p>
+            <p><span class="label">Brand & Model:</span> ${escapeHtml(device.model)}</p>
+            <p><span class="label">IMEI:</span> ${escapeHtml(device.imei1)}</p>
+            <p><span class="label">Storage:</span> ${escapeHtml(device.storage)}</p>
+            <p><span class="label">Color:</span> ${escapeHtml(device.color)}</p>
           </div>
 
           <div class="price-row"><span>Sale Price:</span><span>${formattedPrice}</span></div>
@@ -130,6 +154,7 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
     route.params;
   const { shop, devices } = useShopData();
   const shopName = shop?.shopName || DEFAULT_SHOP_NAME;
+  const shopLines = shopHeaderLines(shop);
   const device = devices.find(d => d.id === deviceId);
   const [invoiceNumber] = useState(() => `SAL${Date.now()}`);
   const [invoiceDate] = useState(() => formatDate(new Date()));
@@ -155,6 +180,7 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
   const generateInvoicePdf = async () => {
     const html = buildInvoiceHtml({
       shopName,
+      shopLines,
       invoiceNumber,
       invoiceDate,
       device,
@@ -234,9 +260,11 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
               <InvoiceIcon width={28} height={28} color={colors.primary} />
             </View>
             <Text style={styles.shopName}>{shopName}</Text>
-            <Text style={styles.shopMeta}>{SHOP_ADDRESS}</Text>
-            <Text style={styles.shopMeta}>Contact: {SHOP_CONTACT}</Text>
-            <Text style={styles.shopMeta}>GST: {SHOP_GST}</Text>
+            {shopLines.map(line => (
+              <Text key={line} style={styles.shopMeta}>
+                {line}
+              </Text>
+            ))}
           </View>
 
           <View style={styles.cardBody}>
