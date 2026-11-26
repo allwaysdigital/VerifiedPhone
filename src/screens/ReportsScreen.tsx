@@ -8,7 +8,8 @@ import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import { useShopData } from '../context/ShopDataContext';
-import { formatINR, formatLakhs, profitLossLabel } from '../utils/format';
+import { formatAmount, formatAxisValue, profitLossLabel } from '../utils/format';
+import { niceYAxis } from '../utils/chart';
 import { parseDMY } from '../utils/date';
 import type { Device } from '../types/domain';
 import BarChart, { ChartSeries } from '../components/BarChart';
@@ -49,29 +50,23 @@ const PERIOD_META: Record<
     saleLabel: 'Total Sale',
     chartTitle: 'Last 7 Days Trend',
     bucketCount: 7,
-    formatValue: formatINR,
+    formatValue: formatAmount,
   },
   Monthly: {
     purchaseLabel: 'This Month Purchase',
     saleLabel: 'This Month Sale',
     chartTitle: 'Last 6 Months Trend',
     bucketCount: 6,
-    formatValue: formatLakhs,
+    formatValue: formatAmount,
   },
   Yearly: {
     purchaseLabel: 'This Year Purchase',
     saleLabel: 'This Year Sale',
     chartTitle: 'Last 5 Years Trend',
     bucketCount: 5,
-    formatValue: formatLakhs,
+    formatValue: formatAmount,
   },
 };
-
-function niceYAxis(maxValue: number): { yMax: number; yStep: number } {
-  const safeMax = Math.max(maxValue, 4);
-  const yMax = Math.ceil((safeMax * 1.2) / 4) * 4;
-  return { yMax, yStep: yMax / 4 };
-}
 
 function buildPeriodData(period: Period, devices: Device[]): PeriodData {
   const meta = PERIOD_META[period];
@@ -250,6 +245,7 @@ export default function ReportsScreen({ navigation }: Props) {
             series={series}
             yMax={data.yMax}
             yStep={data.yStep}
+            formatTick={formatAxisValue}
           />
         </View>
       </ScrollView>

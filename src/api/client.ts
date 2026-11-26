@@ -52,27 +52,56 @@ function appendFormValue(form: FormData, key: string, value: unknown) {
   form.append(key, String(value));
 }
 
+// 0–1 share of the request body sent so far.
+export type UploadProgress = (fraction: number) => void;
+
+// Multipart upload. Uses XMLHttpRequest rather than fetch because only XHR
+// reports upload progress, which the purchase screen shows while photos send.
 export async function requestForm<T>(
   path: string,
   fields: Record<string, unknown>,
-  options: { method?: string } = {},
+  options: { method?: string; onProgress?: UploadProgress } = {},
 ): Promise<T> {
   const headers = await authHeaders();
   const form = new FormData();
   Object.entries(fields).forEach(([key, value]) => appendFormValue(form, key, value));
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? 'POST',
-    headers,
-    // React Native's FormData is a valid fetch body at runtime; its bundled
-    // fetch typings don't line up with lib.dom's BodyInit for this overload.
-    body: form as unknown as string,
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(options.method ?? 'POST', `${API_BASE_URL}${path}`);
+    Object.entries(headers).forEach(([key, value]) => xhr.setRequestHeader(key, value));
+    if (options.onProgress && xhr.upload) {
+      const onProgress = options.onProgress;
+      xhr.upload.onprogress = event => {
+        if (event.lengthComputable && event.total > 0) {
+          onProgress(event.loaded / event.total);
+        }
+      };
+    }
+    xhr.onload = () => {
+      let data: any = null;
+      try {
+        data = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        data = null;
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const message = (data && data.error) || `Request failed with status ${xhr.status}`;
+        reject(new ApiError(xhr.status, message));
+        return;
+      }
+      resolve(data as T);
+    };
+    xhr.onerror = () => reject(new TypeError('Network request failed'));
+    xhr.ontimeout = () => reject(new TypeError('Network request timed out'));
+    xhr.send(form);
   });
-  return parseResponse(res);
 }
 
+// Only local photos are uploaded; an http(s) URI is a photo the server already
+// has (when editing a purchase), so it is left out and the server keeps it.
 export function imageFieldToFormFile(uri: string | null): FormFile | undefined {
-  if (!uri) {
+  if (!uri || /^https?:\/\//i.test(uri)) {
     return undefined;
   }
   const name = uri.split('/').pop() ?? 'upload.jpg';

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -33,6 +35,7 @@ import {
   isValidMobile,
 } from '../utils/validators';
 import BackButton from '../components/BackButton';
+import { savingLabel } from '../utils/upload';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddPurchase'>;
 
@@ -55,33 +58,48 @@ type FormErrors = {
   aadhaarBack?: string;
 };
 
-export default function AddPurchaseScreen({ navigation }: Props) {
+export default function AddPurchaseScreen({ navigation, route }: Props) {
   useScreenStatusBar('dark-content', colors.white);
   useDisableBackNavigation();
-  const { brands } = useShopData();
+  const { brands, devices, updateDevice } = useShopData();
+  // Editing an existing purchase (VP-17) pre-fills every field from it.
+  const editing = route.params?.deviceId
+    ? devices.find(d => d.id === route.params?.deviceId)
+    : undefined;
   const brandOptions = brands.map(b => b.name);
-  const [brand, setBrand] = useState<string | null>(null);
-  const [model, setModel] = useState('');
-  const [color, setColor] = useState('');
-  const [ram, setRam] = useState('');
-  const [storage, setStorage] = useState('');
-  const [condition, setCondition] = useState<string | null>(null);
-  const [batteryHealth, setBatteryHealth] = useState('');
-  const [imei1, setImei1] = useState('');
-  const [imei2, setImei2] = useState('');
-  const [purchasePrice, setPurchasePrice] = useState('');
-  const [expectedSale, setExpectedSale] = useState('');
-  const [accessories, setAccessories] = useState<string[]>(['Charger']);
-  const [fullName, setFullName] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [city, setCity] = useState('');
-  const [sellerPhoto, setSellerPhoto] = useState<string | null>(null);
-  const [phoneFrontImage, setPhoneFrontImage] = useState<string | null>(null);
-  const [phoneBackImage, setPhoneBackImage] = useState<string | null>(null);
-  const [oldPhoneBill, setOldPhoneBill] = useState<string | null>(null);
-  const [aadhaarFront, setAadhaarFront] = useState<string | null>(null);
-  const [aadhaarBack, setAadhaarBack] = useState<string | null>(null);
+  if (editing && !brandOptions.includes(editing.brand)) {
+    brandOptions.push(editing.brand);
+  }
+  const numberText = (value?: number | null) => (value ? String(value) : '');
+  const [brand, setBrand] = useState<string | null>(editing?.brand ?? null);
+  const [model, setModel] = useState(editing?.model ?? '');
+  const [color, setColor] = useState(editing?.color ?? '');
+  const [ram, setRam] = useState(editing?.ram ?? '');
+  const [storage, setStorage] = useState(editing?.storage ?? '');
+  const [condition, setCondition] = useState<string | null>(editing?.condition ?? null);
+  const [batteryHealth, setBatteryHealth] = useState(numberText(editing?.batteryHealth));
+  const [imei1, setImei1] = useState(editing?.imei1 ?? '');
+  const [imei2, setImei2] = useState(editing?.imei2 ?? '');
+  const [purchasePrice, setPurchasePrice] = useState(numberText(editing?.purchasePrice));
+  const [expectedSale, setExpectedSale] = useState(numberText(editing?.expectedSalePrice));
+  const [accessories, setAccessories] = useState<string[]>(editing?.accessories ?? ['Charger']);
+  const [fullName, setFullName] = useState(editing?.sellerName ?? '');
+  const [mobileNumber, setMobileNumber] = useState(editing?.sellerMobile ?? '');
+  const [city, setCity] = useState(editing?.sellerCity ?? '');
+  const [sellerPhoto, setSellerPhoto] = useState<string | null>(editing?.sellerPhotoUrl ?? null);
+  const [phoneFrontImage, setPhoneFrontImage] = useState<string | null>(
+    editing?.phoneFrontImageUrl ?? null,
+  );
+  const [phoneBackImage, setPhoneBackImage] = useState<string | null>(
+    editing?.phoneBackImageUrl ?? null,
+  );
+  const [oldPhoneBill, setOldPhoneBill] = useState<string | null>(editing?.oldPhoneBillUrl ?? null);
+  const [aadhaarFront, setAadhaarFront] = useState<string | null>(editing?.aadhaarFrontUrl ?? null);
+  const [aadhaarBack, setAadhaarBack] = useState<string | null>(editing?.aadhaarBackUrl ?? null);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [saveError, setSaveError] = useState('');
 
   const toggleAccessory = (item: string) => {
     setAccessories(prev =>
@@ -137,10 +155,62 @@ export default function AddPurchaseScreen({ navigation }: Props) {
     return nextErrors;
   };
 
+  // The seller already signed when the phone was bought, so an edit saves
+  // straight away instead of asking for the signature again.
+  const saveEdit = async (deviceId: string) => {
+    setSaving(true);
+    setSaveError('');
+    setUploadProgress(null);
+    try {
+      await updateDevice(
+        deviceId,
+        {
+          brand: brand!,
+          model,
+          color,
+          ram,
+          storage,
+          condition: condition!,
+          batteryHealth,
+          imei1,
+          imei2,
+          purchasePrice,
+          expectedSalePrice: expectedSale,
+          accessories,
+          sellerName: fullName,
+          sellerMobile: mobileNumber,
+          sellerAddress: editing?.sellerAddress ?? '',
+          sellerCity: city,
+          phoneFrontImageUri: phoneFrontImage,
+          phoneBackImageUri: phoneBackImage,
+          oldPhoneBillUri: oldPhoneBill,
+          sellerPhotoUri: sellerPhoto,
+          aadhaarFrontUri: aadhaarFront,
+          aadhaarBackUri: aadhaarBack,
+        },
+        setUploadProgress,
+      );
+      ToastAndroid.show('Purchase updated', ToastAndroid.SHORT);
+      navigation.goBack();
+    } catch {
+      setSaveError('Could not save your changes. Please check your connection and try again.');
+    } finally {
+      setSaving(false);
+      setUploadProgress(null);
+    }
+  };
+
   const handleSave = () => {
+    if (saving) {
+      return;
+    }
     const nextErrors = validate();
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+    if (editing) {
+      saveEdit(editing.id);
       return;
     }
     navigation.navigate('DigitalSignature', {
@@ -174,7 +244,7 @@ export default function AddPurchaseScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
         <BackButton onPress={() => navigation.goBack()} />
-        <Text style={styles.headerTitle}>Add Purchase</Text>
+        <Text style={styles.headerTitle}>{editing ? 'Edit Purchase' : 'Add Purchase'}</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <FormSection title="Device Information">
@@ -272,7 +342,7 @@ export default function AddPurchaseScreen({ navigation }: Props) {
           </TouchableOpacity> */}
         </FormSection>
 
-        <FormSection title="Purchase Details">
+        <FormSection title="Price & Accessories">
           <FormInput
             label="Purchase Price (₹)"
             required
@@ -310,7 +380,7 @@ export default function AddPurchaseScreen({ navigation }: Props) {
           </View>
         </FormSection>
 
-        <FormSection title="Personal Information">
+        <FormSection title="Seller Details">
           <FormInput
             label="Full Name"
             required
@@ -344,7 +414,7 @@ export default function AddPurchaseScreen({ navigation }: Props) {
           />
         </FormSection>
 
-        <FormSection title="Purchase Details">
+        <FormSection title="Photos & Documents">
           <UploadField
             testID="upload-phone-front"
             label="Phone Front Image"
@@ -398,10 +468,15 @@ export default function AddPurchaseScreen({ navigation }: Props) {
             onPress={() => navigation.goBack()}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Save</Text>
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.saveButtonBusy]}
+            onPress={handleSave}
+            disabled={saving}>
+            {saving ? <ActivityIndicator size="small" color={colors.white} /> : null}
+            <Text style={styles.saveButtonText}>{saving ? savingLabel(uploadProgress) : 'Save'}</Text>
           </TouchableOpacity>
         </View>
+        {saveError ? <Text style={styles.saveErrorText}>{saveError}</Text> : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -485,12 +560,23 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     backgroundColor: colors.primary,
+    flexDirection: 'row',
+    gap: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  saveButtonBusy: {
+    opacity: 0.85,
   },
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.white,
+  },
+  saveErrorText: {
+    marginTop: 12,
+    textAlign: 'center',
+    fontSize: 13,
+    color: colors.danger,
   },
 });

@@ -204,7 +204,7 @@ export default function SettingsScreen({ navigation }: Props) {
             {errors.shopName ? <Text style={styles.errorText}>{errors.shopName}</Text> : null}
           </View>
 
-          <Text style={styles.label}>GST Number</Text>
+          <Text style={styles.label}>GST Number (optional)</Text>
           <View style={styles.fieldWrap}>
             <TextInput
               style={[styles.input, errors.gstNumber ? styles.inputError : null]}

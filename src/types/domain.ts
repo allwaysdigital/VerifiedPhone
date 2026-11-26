@@ -44,6 +44,7 @@ export type Device = {
   buyerAadhaarBackUrl?: string | null;
   salePrice?: number;
   warrantyPeriod?: string;
+  invoiceNumber?: string;
 };
 
 export type Brand = {

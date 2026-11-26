@@ -62,7 +62,8 @@ export type RootStackParamList = {
     customStartIso?: string;
     customEndIso?: string;
   };
-  AddPurchase: undefined;
+  // With a deviceId the screen edits that purchase instead of adding one.
+  AddPurchase: { deviceId?: string } | undefined;
   PurchaseList: undefined;
   SaleList: undefined;
   ProfitList: undefined;

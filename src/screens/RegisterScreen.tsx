@@ -15,7 +15,6 @@ import { fonts } from '../theme/fonts';
 import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import ShopIcon from '../assets/icons/shop_details_icon.svg';
 import { UploadField } from '../components/FormControls';
-import { SHOP_NAME } from '../constants/app';
 import {
   MOBILE_MESSAGE,
   REQUIRED_MESSAGE,
@@ -34,7 +33,7 @@ type FormErrors = {
 
 export default function RegisterScreen({ navigation }: Props) {
   useScreenStatusBar('dark-content', colors.white);
-  const [shopName, setShopName] = useState(SHOP_NAME);
+  const [shopName, setShopName] = useState('');
   const [gstNumber, setGstNumber] = useState('');
   const [address, setAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
@@ -86,7 +85,7 @@ export default function RegisterScreen({ navigation }: Props) {
           <View style={styles.fieldWrap}>
             <TextInput
               style={[styles.input, errors.shopName ? styles.inputError : null]}
-              placeholder="Mobile Hub"
+              placeholder="e.g. Mobile Hub"
               placeholderTextColor={colors.textDisabled}
               value={shopName}
               onChangeText={text => {
@@ -99,11 +98,11 @@ export default function RegisterScreen({ navigation }: Props) {
             {errors.shopName ? <Text style={styles.errorText}>{errors.shopName}</Text> : null}
           </View>
 
-          <Text style={styles.label}>GST Number</Text>
+          <Text style={styles.label}>GST Number (optional)</Text>
           <View style={styles.fieldWrap}>
             <TextInput
               style={[styles.input, errors.gstNumber ? styles.inputError : null]}
-              placeholder="27AABCU9603R1ZM"
+              placeholder="e.g. 24ABCDE1234F1Z5"
               placeholderTextColor={colors.textDisabled}
               autoCapitalize="characters"
               value={gstNumber}
@@ -121,6 +120,7 @@ export default function RegisterScreen({ navigation }: Props) {
           <View style={styles.fieldWrap}>
             <TextInput
               style={[styles.input, styles.addressInput, errors.address ? styles.inputError : null]}
+              placeholder="e.g. Shop 12, Main Road, Ahmedabad"
               placeholderTextColor={colors.textDisabled}
               multiline
               value={address}

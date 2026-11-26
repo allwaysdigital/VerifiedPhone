@@ -54,6 +54,9 @@ const deviceSchema = new Schema(
     salePrice: { type: Number, default: null },
     warrantyPeriod: { type: String, default: null },
     soldAt: { type: Date, default: null },
+    // Assigned once when the sale is recorded and never changed, so every
+    // view and PDF of the invoice shows the same number.
+    invoiceNumber: { type: String, default: null },
   },
   { timestamps: true },
 );

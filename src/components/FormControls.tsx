@@ -161,7 +161,15 @@ export function UploadField({
 
   const pickFrom = async (source: 'camera' | 'library') => {
     setPickerVisible(false);
-    const options = { mediaType: 'photo' as const, quality: 0.8 as const };
+    // Phone cameras produce 4–8 MB photos; 1600px at 70% is still sharp enough
+    // to read an Aadhaar card or IMEI sticker and is a few hundred KB, so a
+    // purchase with 6 photos uploads in seconds instead of ~40s (VP-07).
+    const options = {
+      mediaType: 'photo' as const,
+      quality: 0.7 as const,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    };
     const result =
       source === 'camera' ? await launchCamera(options) : await launchImageLibrary(options);
 

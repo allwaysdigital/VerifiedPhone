@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { generatePDF } from 'react-native-html-to-pdf';
 import Share, { Social } from 'react-native-share';
+import { savePdfToDownloads } from '../native/downloads';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -11,141 +12,15 @@ import { useScreenStatusBar } from '../hooks/useScreenStatusBar';
 import BackButton from '../components/BackButton';
 import InvoiceIcon from '../assets/icons/invoice_icon.svg';
 import { useShopData } from '../context/ShopDataContext';
-import type { Device } from '../types/domain';
+import { APP_NAME } from '../constants/app';
+import { deviceName } from '../utils/format';
+import { buildInvoiceHtml, INVOICE_TERMS, shopHeaderLines } from '../utils/invoice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InvoicePreview'>;
 
-const DEFAULT_SHOP_NAME = 'Mobile Hub';
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-// Shop header lines from Settings → Shop Details; empty fields are left out.
-function shopHeaderLines(shop: { address?: string; contactNumber?: string; gstNumber?: string } | null) {
-  const lines: string[] = [];
-  if (shop?.address?.trim()) {
-    lines.push(shop.address.trim());
-  }
-  if (shop?.contactNumber?.trim()) {
-    lines.push(`Contact: ${shop.contactNumber.trim()}`);
-  }
-  if (shop?.gstNumber?.trim()) {
-    lines.push(`GST: ${shop.gstNumber.trim()}`);
-  }
-  return lines;
-}
-
-const TERMS = [
-  'No returns or exchanges after purchase',
-  'Warranty is void if tampered or physically damaged',
-  'Keep this invoice for warranty claims',
-  'IMEI verified at the time of purchase',
-];
 
 function formatDate(date: Date): string {
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-}
-
-function buildInvoiceHtml(params: {
-  shopName: string;
-  shopLines: string[];
-  invoiceNumber: string;
-  invoiceDate: string;
-  device: Device;
-  customerName: string;
-  customerMobile: string;
-  customerAddress: string;
-  salePrice: number;
-  warrantyPeriod: string;
-}): string {
-  const { shopLines, invoiceNumber, invoiceDate, device, salePrice } = params;
-  const shopName = escapeHtml(params.shopName);
-  const customerName = escapeHtml(params.customerName);
-  const customerMobile = escapeHtml(params.customerMobile);
-  const customerAddress = escapeHtml(params.customerAddress);
-  const warrantyPeriod = escapeHtml(params.warrantyPeriod);
-  const formattedPrice = `₹${salePrice.toLocaleString('en-IN')}`;
-
-  return `
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <style>
-          body { font-family: -apple-system, Roboto, Helvetica, Arial, sans-serif; color: #303030; padding: 0; margin: 0; }
-          .header { background: ${colors.primary}; color: #fff; text-align: center; padding: 28px 16px; }
-          .header h1 { margin: 0 0 6px; font-size: 24px; }
-          .header p { margin: 2px 0; font-size: 13px; opacity: 0.9; }
-          .body { padding: 20px; }
-          .meta-row { display: flex; justify-content: space-between; margin-bottom: 20px; }
-          .meta-row .label { font-size: 12px; color: #999; margin-bottom: 2px; }
-          .meta-row .value { font-size: 16px; font-weight: 700; }
-          h2 { font-size: 15px; margin: 0 0 8px; }
-          .box { background: #f5f7fa; border-radius: 8px; padding: 12px; margin-bottom: 18px; font-size: 14px; }
-          .box p { margin: 4px 0; }
-          .box .label { color: #999; }
-          .price-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
-          .divider { border-top: 1px solid #eee; margin: 12px 0; }
-          .total-row { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; }
-          .total-row .value { color: ${colors.greenDark}; }
-          .warranty { background: #dbeafe; border-radius: 8px; padding: 10px 14px; margin-top: 8px; font-size: 14px; font-weight: 600; }
-          ul { font-size: 12px; color: #666; padding-left: 18px; }
-          .signature { text-align: right; margin-top: 30px; }
-          .signature .label { font-size: 12px; color: #999; }
-          .signature .shop { font-size: 15px; font-weight: 700; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>${shopName}</h1>
-          ${shopLines.map(line => `<p>${escapeHtml(line)}</p>`).join('')}
-        </div>
-        <div class="body">
-          <div class="meta-row">
-            <div><div class="label">Invoice Number</div><div class="value">${invoiceNumber}</div></div>
-            <div style="text-align:right"><div class="label">Date</div><div class="value">${invoiceDate}</div></div>
-          </div>
-
-          <h2>Customer Details</h2>
-          <div class="box">
-            <p><span class="label">Name:</span> ${customerName}</p>
-            <p><span class="label">Mobile:</span> ${customerMobile}</p>
-            ${customerAddress ? `<p><span class="label">Address:</span> ${customerAddress}</p>` : ''}
-          </div>
-
-          <h2>Product Details</h2>
-          <div class="box">
-            <p><span class="label">Brand & Model:</span> ${escapeHtml(device.model)}</p>
-            <p><span class="label">IMEI:</span> ${escapeHtml(device.imei1)}</p>
-            <p><span class="label">Storage:</span> ${escapeHtml(device.storage)}</p>
-            <p><span class="label">Color:</span> ${escapeHtml(device.color)}</p>
-          </div>
-
-          <div class="price-row"><span>Sale Price:</span><span>${formattedPrice}</span></div>
-          <div class="divider"></div>
-          <div class="total-row"><span>Total Amount:</span><span class="value">${formattedPrice}</span></div>
-
-          ${warrantyPeriod ? `<div class="warranty">Warranty: ${warrantyPeriod}</div>` : ''}
-
-          <div class="divider"></div>
-          <h2>Terms & Conditions</h2>
-          <ul>
-            ${TERMS.map(term => `<li>${term}</li>`).join('')}
-          </ul>
-
-          <div class="signature">
-            <div class="label">Authorized Signature</div>
-            <div class="shop">${shopName}</div>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
 }
 
 export default function InvoicePreviewScreen({ navigation, route }: Props) {
@@ -153,11 +28,14 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
   const { deviceId, customerName, customerMobile, customerAddress, salePrice, warrantyPeriod } =
     route.params;
   const { shop, devices } = useShopData();
-  const shopName = shop?.shopName || DEFAULT_SHOP_NAME;
+  const shopName = shop?.shopName || APP_NAME;
   const shopLines = shopHeaderLines(shop);
   const device = devices.find(d => d.id === deviceId);
-  const [invoiceNumber] = useState(() => `SAL${Date.now()}`);
-  const [invoiceDate] = useState(() => formatDate(new Date()));
+  // Both come from the saved sale, so every view and PDF matches.
+  const invoiceNumber = device?.invoiceNumber ?? '—';
+  const invoiceDate = device?.saleDate ?? formatDate(new Date());
+  // Invoice numbers contain "/" (MC/2026-27/0001), which can't be in a file name.
+  const invoiceFileName = `Invoice-${invoiceNumber.replace(/[^A-Za-z0-9-]/g, '-')}`;
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
 
@@ -192,7 +70,7 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
     });
     const { filePath } = await generatePDF({
       html,
-      fileName: invoiceNumber,
+      fileName: invoiceFileName,
     });
     return filePath;
   };
@@ -204,17 +82,10 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
     setIsDownloading(true);
     try {
       const filePath = await generateInvoicePdf();
-      await Share.open({
-        url: `file://${filePath}`,
-        type: 'application/pdf',
-        filename: invoiceNumber,
-        saveToFiles: true,
-      });
+      await savePdfToDownloads(filePath, invoiceFileName, 'Invoice downloaded');
     } catch (error: any) {
-      if (!error?.message?.includes('User did not share')) {
-        console.error('Invoice PDF download failed:', error);
-        Alert.alert('Download failed', error?.message ?? 'Could not generate the invoice PDF. Please try again.');
-      }
+      console.error('Invoice PDF download failed:', error);
+      Alert.alert('Download failed', error?.message ?? 'Could not save the invoice PDF. Please try again.');
     } finally {
       setIsDownloading(false);
     }
@@ -231,7 +102,7 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
         social: Social.Whatsapp,
         url: `file://${filePath}`,
         type: 'application/pdf',
-        filename: invoiceNumber,
+        filename: invoiceFileName,
       });
     } catch (error: any) {
       if (!error?.message?.includes('User did not share')) {
@@ -301,7 +172,7 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
             <View style={styles.infoBox}>
               <Text style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Brand & Model: </Text>
-                <Text style={styles.infoValue}>{device.model}</Text>
+                <Text style={styles.infoValue}>{deviceName(device)}</Text>
               </Text>
               <Text style={styles.infoRow}>
                 <Text style={styles.infoLabel}>IMEI: </Text>
@@ -337,7 +208,7 @@ export default function InvoicePreviewScreen({ navigation, route }: Props) {
 
             <View style={styles.divider} />
             <Text style={styles.sectionTitle}>Terms & Conditions</Text>
-            {TERMS.map(term => (
+            {INVOICE_TERMS.map(term => (
               <Text key={term} style={styles.termItem}>
                 • {term}
               </Text>

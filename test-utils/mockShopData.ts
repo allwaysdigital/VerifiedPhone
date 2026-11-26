@@ -10,6 +10,7 @@ export function createMockShopDataContext(overrides: Partial<ShopDataState> = {}
     error: null,
     refetchAll: jest.fn().mockResolvedValue(undefined),
     createDevice: jest.fn(),
+    updateDevice: jest.fn(),
     markDeviceSold: jest.fn(),
     createBrand: jest.fn(),
     registerShop: jest.fn(),

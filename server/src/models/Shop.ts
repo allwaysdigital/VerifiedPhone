@@ -55,6 +55,9 @@ const shopSchema = new Schema(
     // 123456 — app store reviewers, QA devices, etc. See auth/otpBypass.ts.
     otpBypass: { type: Boolean, default: false },
     subscription: { type: subscriptionSchema, default: () => ({}) },
+    // Last sale invoice number used per financial year, e.g. { "2026-27": 12 }
+    // (see utils/invoiceNumber.ts).
+    invoiceCounters: { type: Schema.Types.Mixed, default: () => ({}) },
   },
   { timestamps: true },
 );
