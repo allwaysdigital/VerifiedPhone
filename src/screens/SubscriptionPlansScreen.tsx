@@ -313,7 +313,9 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
             </View>
           </TouchableOpacity>
 
-          {subscription?.testPlanEnabled ? (
+          {/* The ₹1 test plan is for verifying payments in development
+              builds only — never shown in a release (Play Store) build. */}
+          {__DEV__ && subscription?.testPlanEnabled ? (
             <TouchableOpacity
               style={[
                 styles.planCard,
